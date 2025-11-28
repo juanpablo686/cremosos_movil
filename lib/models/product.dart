@@ -15,6 +15,9 @@ class Product {
   final int reviewCount;
   final List<String> ingredients;
   final List<String>? allergens;
+  final List<ProductVariant>? variants; // Variantes (tallas, colores, etc.)
+  final List<String>? images; // Imágenes adicionales
+  final bool isAvailable; // Disponibilidad
 
   Product({
     required this.id,
@@ -31,6 +34,9 @@ class Product {
     required this.reviewCount,
     required this.ingredients,
     this.allergens,
+    this.variants,
+    this.images,
+    this.isAvailable = true,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -53,6 +59,15 @@ class Product {
       allergens: json['allergens'] != null
           ? List<String>.from(json['allergens'] as List)
           : null,
+      variants: json['variants'] != null
+          ? (json['variants'] as List)
+              .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+              .toList()
+          : null,
+      images: json['images'] != null
+          ? List<String>.from(json['images'] as List)
+          : null,
+      isAvailable: json['isAvailable'] as bool? ?? true,
     );
   }
 
@@ -72,6 +87,9 @@ class Product {
       'reviewCount': reviewCount,
       'ingredients': ingredients,
       'allergens': allergens,
+      'variants': variants?.map((v) => v.toJson()).toList(),
+      'images': images,
+      'isAvailable': isAvailable,
     };
   }
 
@@ -90,6 +108,9 @@ class Product {
     int? reviewCount,
     List<String>? ingredients,
     List<String>? allergens,
+    List<ProductVariant>? variants,
+    List<String>? images,
+    bool? isAvailable,
   }) {
     return Product(
       id: id ?? this.id,
@@ -106,6 +127,9 @@ class Product {
       reviewCount: reviewCount ?? this.reviewCount,
       ingredients: ingredients ?? this.ingredients,
       allergens: allergens ?? this.allergens,
+      variants: variants ?? this.variants,
+      images: images ?? this.images,
+      isAvailable: isAvailable ?? this.isAvailable,
     );
   }
 
@@ -113,12 +137,84 @@ class Product {
       (onSale ?? false) && salePrice != null ? salePrice! : price;
 }
 
+// Modelo de variante de producto (tallas, colores, etc.)
+class ProductVariant {
+  final String id;
+  final String name; // Ej: "Grande", "Rojo", "500ml"
+  final VariantType type; // Talla, Color, Tamaño
+  final double? priceModifier; // +500 para talla grande
+  final int stock;
+  final String? colorCode; // Código hex para colores
+
+  ProductVariant({
+    required this.id,
+    required this.name,
+    required this.type,
+    this.priceModifier,
+    required this.stock,
+    this.colorCode,
+  });
+
+  factory ProductVariant.fromJson(Map<String, dynamic> json) {
+    return ProductVariant(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      type: VariantType.fromString(json['type'] as String),
+      priceModifier: json['priceModifier'] != null
+          ? (json['priceModifier'] as num).toDouble()
+          : null,
+      stock: json['stock'] as int,
+      colorCode: json['colorCode'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type.value,
+      'priceModifier': priceModifier,
+      'stock': stock,
+      'colorCode': colorCode,
+    };
+  }
+}
+
+enum VariantType {
+  size('size'),
+  color('color'),
+  flavor('flavor');
+
+  final String value;
+  const VariantType(this.value);
+
+  static VariantType fromString(String value) {
+    return VariantType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => VariantType.size,
+    );
+  }
+
+  String get displayName {
+    switch (this) {
+      case VariantType.size:
+        return 'Tamaño';
+      case VariantType.color:
+        return 'Color';
+      case VariantType.flavor:
+        return 'Sabor';
+    }
+  }
+}
+
 enum ProductCategory {
   arrozConLeche('arroz-con-leche'),
   fresasConCrema('fresas-con-crema'),
   postresEspeciales('postres-especiales'),
   bebidasCremosas('bebidas-cremosas'),
-  toppings('toppings');
+  toppings('toppings'),
+  bebidas('bebidas'),
+  postres('postres');
 
   final String value;
   const ProductCategory(this.value);
@@ -142,6 +238,10 @@ enum ProductCategory {
         return 'Bebidas Cremosas';
       case ProductCategory.toppings:
         return 'Toppings';
+      case ProductCategory.bebidas:
+        return 'Bebidas';
+      case ProductCategory.postres:
+        return 'Postres';
     }
   }
 }

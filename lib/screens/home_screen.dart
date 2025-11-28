@@ -17,6 +17,38 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentBannerIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _nextBanner(int totalBanners) {
+    final nextIndex = (_currentBannerIndex + 1) % totalBanners;
+    _pageController.animateToPage(
+      nextIndex,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _previousBanner(int totalBanners) {
+    final previousIndex =
+        (_currentBannerIndex - 1 + totalBanners) % totalBanners;
+    _pageController.animateToPage(
+      previousIndex,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,60 +89,134 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Banner Carousel
+              // Banner Carousel con flechas de navegación
               if (activeBanners.isNotEmpty)
-                SizedBox(
-                  height: 200,
-                  child: PageView.builder(
-                    itemCount: activeBanners.length,
-                    onPageChanged: (index) =>
-                        setState(() => _currentBannerIndex = index),
-                    itemBuilder: (context, index) {
-                      final banner = activeBanners[index];
-                      return Container(
-                        margin: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: banner.backgroundColor != null
-                              ? Color(int.parse(
-                                  '0xFF${banner.backgroundColor!.substring(1)}'))
-                              : Colors.deepPurple,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                banner.title,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: banner.textColor != null
-                                      ? Color(int.parse(
-                                          '0xFF${banner.textColor!.substring(1)}'))
-                                      : Colors.white,
+                Container(
+                  height: 220,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: Stack(
+                    children: [
+                      PageView.builder(
+                        controller: _pageController,
+                        itemCount: activeBanners.length,
+                        onPageChanged: (index) =>
+                            setState(() => _currentBannerIndex = index),
+                        itemBuilder: (context, index) {
+                          final banner = activeBanners[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: banner.backgroundColor != null
+                                  ? Color(int.parse(
+                                      '0xFF${banner.backgroundColor!.substring(1)}'))
+                                  : Colors.deepPurple,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    banner.title,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: banner.textColor != null
+                                          ? Color(int.parse(
+                                              '0xFF${banner.textColor!.substring(1)}'))
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                  if (banner.subtitle != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      banner.subtitle!,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: banner.textColor != null
+                                            ? Color(int.parse(
+                                                '0xFF${banner.textColor!.substring(1)}'))
+                                            : Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      // Flecha izquierda
+                      if (activeBanners.length > 1)
+                        Positioned(
+                          left: 8,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_ios_new,
+                                      size: 20),
+                                  color: Colors.deepPurple,
+                                  onPressed: () =>
+                                      _previousBanner(activeBanners.length),
                                 ),
                               ),
-                              if (banner.subtitle != null) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  banner.subtitle!,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: banner.textColor != null
-                                        ? Color(int.parse(
-                                            '0xFF${banner.textColor!.substring(1)}'))
-                                        : Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            ],
+                            ),
                           ),
                         ),
-                      );
-                    },
+                      // Flecha derecha
+                      if (activeBanners.length > 1)
+                        Positioned(
+                          right: 8,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_forward_ios,
+                                      size: 20),
+                                  color: Colors.deepPurple,
+                                  onPressed: () =>
+                                      _nextBanner(activeBanners.length),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -158,13 +264,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ProductCategory.postresEspeciales => Icons.icecream,
                           ProductCategory.bebidasCremosas => Icons.local_cafe,
                           ProductCategory.toppings => Icons.add_circle_outline,
+                          ProductCategory.bebidas => Icons.coffee,
+                          ProductCategory.postres => Icons.cookie,
                         };
                         final label = switch (category) {
                           ProductCategory.arrozConLeche => 'Arroz',
                           ProductCategory.fresasConCrema => 'Fresas',
-                          ProductCategory.postresEspeciales => 'Postres',
-                          ProductCategory.bebidasCremosas => 'Bebidas',
+                          ProductCategory.postresEspeciales => 'Postres Esp.',
+                          ProductCategory.bebidasCremosas => 'Bebidas Crem.',
                           ProductCategory.toppings => 'Toppings',
+                          ProductCategory.bebidas => 'Bebidas',
+                          ProductCategory.postres => 'Postres',
                         };
                         return ActionChip(
                           avatar: Icon(iconData, size: 18),
@@ -351,23 +461,23 @@ class _ProductCard extends StatelessWidget {
                       const Icon(Icons.star, size: 14, color: Colors.amber),
                       const SizedBox(width: 2),
                       Text('${product.rating}',
-                          style: const TextStyle(fontSize: 11)),
+                          style: const TextStyle(fontSize: 10)),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (product.salePrice != null) ...[
-                    Text('₱${product.price.toStringAsFixed(0)}',
+                  if (product.onSale == true && product.salePrice != null) ...[
+                    Text('\$${product.price.toStringAsFixed(0)}',
                         style: TextStyle(
                             fontSize: 11,
                             decoration: TextDecoration.lineThrough,
                             color: Colors.grey.shade600)),
-                    Text('₱${product.effectivePrice.toStringAsFixed(0)}',
+                    Text('\$${product.effectivePrice.toStringAsFixed(0)}',
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.deepPurple)),
                   ] else
-                    Text('₱${product.price.toStringAsFixed(0)}',
+                    Text('\$${product.price.toStringAsFixed(0)}',
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,

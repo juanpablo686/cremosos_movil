@@ -18,6 +18,17 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int _quantity = 1;
   final Set<String> _selectedToppings = {};
+  ProductVariant? _selectedVariant;
+
+  @override
+  void initState() {
+    super.initState();
+    // Seleccionar la primera variante por defecto si existe
+    if (widget.product.variants != null &&
+        widget.product.variants!.isNotEmpty) {
+      _selectedVariant = widget.product.variants!.first;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +127,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             // Price
                             if (widget.product.salePrice != null) ...[
                               Text(
-                                '₱${widget.product.price.toStringAsFixed(0)}',
+                                '\$${widget.product.price.toStringAsFixed(0)}',
                                 style: TextStyle(
                                   fontSize: 11,
                                   decoration: TextDecoration.lineThrough,
@@ -124,7 +135,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                               ),
                               Text(
-                                '₱${widget.product.effectivePrice.toStringAsFixed(0)}',
+                                '\$${widget.product.effectivePrice.toStringAsFixed(0)}',
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -132,7 +143,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               ),
                             ] else
                               Text(
-                                '₱${widget.product.price.toStringAsFixed(0)}',
+                                '\$${widget.product.price.toStringAsFixed(0)}',
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -155,9 +166,62 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
-                  // Description
+                  // Variantes (Tallas, Colores, Sabores)
+                  if (widget.product.variants != null &&
+                      widget.product.variants!.isNotEmpty) ...[
+                    Text('${widget.product.variants!.first.type.displayName}',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.product.variants!.map((variant) {
+                        final isSelected = _selectedVariant?.id == variant.id;
+                        return ChoiceChip(
+                          label: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(variant.name,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  )),
+                              if (variant.priceModifier != null &&
+                                  variant.priceModifier! > 0)
+                                Text(
+                                    '+\$${variant.priceModifier!.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: Colors.grey.shade600)),
+                            ],
+                          ),
+                          selected: isSelected,
+                          onSelected: variant.stock > 0
+                              ? (selected) {
+                                  setState(() {
+                                    _selectedVariant =
+                                        selected ? variant : null;
+                                  });
+                                }
+                              : null,
+                          selectedColor: Colors.deepPurple.shade100,
+                          backgroundColor:
+                              variant.stock <= 0 ? Colors.grey.shade200 : null,
+                          labelStyle: TextStyle(
+                            color: variant.stock <= 0 ? Colors.grey : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Ingredients
                   const Text('Descripción',
                       style:
                           TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
@@ -232,7 +296,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         },
                         title: Text(topping.name,
                             style: const TextStyle(fontSize: 12)),
-                        subtitle: Text('₱${topping.price.toStringAsFixed(0)}',
+                        subtitle: Text('\$${topping.price.toStringAsFixed(0)}',
                             style: const TextStyle(fontSize: 11)),
                         contentPadding: EdgeInsets.zero,
                         dense: true,
@@ -392,7 +456,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                                 style: const TextStyle(
                                                     fontSize: 9)),
                                             Text(
-                                                '₱${product.effectivePrice.toStringAsFixed(0)}',
+                                                '\$${product.effectivePrice.toStringAsFixed(0)}',
                                                 style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 10)),

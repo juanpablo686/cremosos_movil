@@ -61,7 +61,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         await ref.read(authProvider.notifier).register(registerData);
       }
 
-      if (mounted) Navigator.of(context).pop();
+      // No hacer Navigator.pop - dejar que el estado maneje la navegación automáticamente
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                _isLogin ? '¡Bienvenido!' : '¡Cuenta creada exitosamente!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

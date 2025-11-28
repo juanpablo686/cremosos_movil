@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/products_provider.dart';
-import '../providers/cart_provider.dart';
 import '../models/product.dart';
 import 'product_detail_screen.dart';
 
@@ -85,9 +84,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   final label = switch (category) {
                     ProductCategory.arrozConLeche => 'Arroz',
                     ProductCategory.fresasConCrema => 'Fresas',
-                    ProductCategory.postresEspeciales => 'Postres',
-                    ProductCategory.bebidasCremosas => 'Bebidas',
+                    ProductCategory.postresEspeciales => 'Postres Esp.',
+                    ProductCategory.bebidasCremosas => 'Bebidas Crem.',
                     ProductCategory.toppings => 'Toppings',
+                    ProductCategory.bebidas => 'Bebidas',
+                    ProductCategory.postres => 'Postres',
                   };
                   return _CategoryChip(
                     label: label,
@@ -323,13 +324,16 @@ class ProductCard extends ConsumerWidget {
               padding: const EdgeInsets.all(6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 11),
+                  Flexible(
+                    child: Text(
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 11),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Row(
@@ -343,53 +347,28 @@ class ProductCard extends ConsumerWidget {
                   const Spacer(),
                   if (product.salePrice != null) ...[
                     Text(
-                      '₱${product.price.toStringAsFixed(0)}',
+                      '\$${product.price.toStringAsFixed(0)}',
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 8,
                         decoration: TextDecoration.lineThrough,
                         color: Colors.grey.shade600,
                       ),
                     ),
                     Text(
-                      '₱${product.effectivePrice.toStringAsFixed(0)}',
+                      '\$${product.effectivePrice.toStringAsFixed(0)}',
                       style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: Colors.deepPurple),
                     ),
                   ] else
                     Text(
-                      '₱${product.price.toStringAsFixed(0)}',
+                      '\$${product.price.toStringAsFixed(0)}',
                       style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: Colors.deepPurple),
                     ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 28,
-                    child: ElevatedButton(
-                      onPressed: product.stock > 0
-                          ? () {
-                              ref
-                                  .read(cartProvider.notifier)
-                                  .addItem(product.id, quantity: 1);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${product.name} agregado'),
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        textStyle: const TextStyle(fontSize: 10),
-                      ),
-                      child: const Icon(Icons.shopping_cart, size: 14),
-                    ),
-                  ),
                 ],
               ),
             ),

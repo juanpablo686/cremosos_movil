@@ -87,12 +87,8 @@ enum ProductSortOption {
 class ProductsNotifier extends StateNotifier<ProductsState> {
   ProductsNotifier()
       : super(ProductsState(
-          allProducts: allProducts
-              .where((p) => p.category != ProductCategory.toppings)
-              .toList(),
-          filteredProducts: allProducts
-              .where((p) => p.category != ProductCategory.toppings)
-              .toList(),
+          allProducts: allProducts,
+          filteredProducts: allProducts,
         )) {
     _loadProducts();
   }
@@ -100,39 +96,48 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
   Future<void> _loadProducts() async {
     state = state.copyWith(isLoading: true);
 
-    // Simular delay de carga
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Simular delay de carga de API (500ms-1.5s)
+    await Future.delayed(
+      Duration(milliseconds: 500 + (DateTime.now().millisecond % 1000)),
+    );
 
     _applyFilters();
 
     state = state.copyWith(isLoading: false);
   }
 
-  // Filtrar por categoría
-  void filterByCategory(ProductCategory? category) {
+  // Filtrar por categoría con simulación asíncrona
+  Future<void> filterByCategory(ProductCategory? category) async {
     state = state.copyWith(
-      selectedCategory: category,
-      currentPage: 1,
-    );
+        isLoading: true, selectedCategory: category, currentPage: 1);
+
+    // Simular delay
+    await Future.delayed(const Duration(milliseconds: 300));
+
     _applyFilters();
+    state = state.copyWith(isLoading: false);
   }
 
-  // Buscar productos
-  void search(String query) {
-    state = state.copyWith(
-      searchQuery: query,
-      currentPage: 1,
-    );
+  // Buscar productos con simulación asíncrona
+  Future<void> search(String query) async {
+    state = state.copyWith(isLoading: true, searchQuery: query, currentPage: 1);
+
+    // Simular delay de búsqueda
+    await Future.delayed(const Duration(milliseconds: 400));
+
     _applyFilters();
+    state = state.copyWith(isLoading: false);
   }
 
-  // Ordenar productos
-  void sortBy(ProductSortOption option) {
-    state = state.copyWith(
-      sortOption: option,
-      currentPage: 1,
-    );
+  // Ordenar productos con simulación asíncrona
+  Future<void> sortBy(ProductSortOption option) async {
+    state = state.copyWith(isLoading: true, sortOption: option, currentPage: 1);
+
+    // Simular delay
+    await Future.delayed(const Duration(milliseconds: 200));
+
     _applyFilters();
+    state = state.copyWith(isLoading: false);
   }
 
   // Filtrar por precio
@@ -252,7 +257,7 @@ final onSaleProductsProvider = Provider<List<Product>>((ref) {
 });
 
 // Provider de toppings disponibles
-final availableToppingsProvider = Provider<List<Topping>>((ref) {
+final availableToppingsProvider = Provider<List<Product>>((ref) {
   return availableToppings;
 });
 
@@ -271,5 +276,5 @@ final relatedProductsProvider =
 // Provider de reviews por producto
 final productReviewsProvider =
     Provider.family<List<Review>, String>((ref, productId) {
-  return getReviewsByProductId(productId);
+  return getProductReviews(productId);
 });

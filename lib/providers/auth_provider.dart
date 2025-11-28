@@ -66,8 +66,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // Simular delay de red
-      await Future.delayed(const Duration(seconds: 1));
+      // Simular delay de red (800ms - 1.5s)
+      await Future.delayed(
+        Duration(milliseconds: 800 + (DateTime.now().millisecond % 700)),
+      );
 
       final response = simulateLogin(email, password);
 
@@ -95,8 +97,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // Simular delay de red
-      await Future.delayed(const Duration(seconds: 1));
+      // Simular delay de red (1s - 2s)
+      await Future.delayed(
+        Duration(milliseconds: 1000 + (DateTime.now().millisecond % 1000)),
+      );
 
       // Validar que el email no exista
       if (getUserByEmail(data.email) != null) {
@@ -150,7 +154,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Simular delay de API
+      await Future.delayed(
+        Duration(milliseconds: 500 + (DateTime.now().millisecond % 500)),
+      );
 
       state = state.copyWith(
         user: updatedUser,
@@ -169,16 +176,67 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> refreshToken() async {
     if (state.user == null) return;
 
+    state = state.copyWith(isLoading: true);
+
     try {
+      // Simular delay de API
+      await Future.delayed(const Duration(milliseconds: 800));
+
       final newToken =
           'mock_token_${state.user!.id}_${DateTime.now().millisecondsSinceEpoch}';
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', newToken);
 
-      state = state.copyWith(token: newToken);
+      state = state.copyWith(token: newToken, isLoading: false);
     } catch (e) {
-      // Ignorar errores de refresh
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  // Verificar sesión activa
+  Future<bool> verifySession() async {
+    if (state.token == null || state.user == null) return false;
+
+    try {
+      // Simular verificación de API
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // En una app real, verificaríamos el token con el backend
+      // Por ahora, verificamos que el usuario exista
+      final user = getUserById(state.user!.id);
+      if (user == null || !user.isActive) {
+        await logout();
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Cambiar contraseña (simulado)
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    state = state.copyWith(isLoading: true);
+
+    try {
+      // Simular delay de API
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // En una app real, validaríamos con el backend
+      if (currentPassword.length < 6 || newPassword.length < 6) {
+        throw Exception('La contraseña debe tener al menos 6 caracteres');
+      }
+
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+      rethrow;
     }
   }
 }

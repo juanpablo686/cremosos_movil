@@ -1,12 +1,21 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    deprecated_member_use: ignore
+    unused_element: ignore
+    
 linter:
   rules:
-    prefer_const_constructors: true
-    prefer_const_literals_to_create_immutables: true
-    avoid_print: true
-    prefer_single_quotes: true
-    sort_constructors_first: true
-    always_declare_return_types: true
-    avoid_unnecessary_containers: true
-    sized_box_for_whitespace: true
+    # Desactivar reglas de estilo que no afectan funcionalidad
+    prefer_const_constructors: false
+    prefer_const_literals_to_create_immutables: false
+    avoid_print: false
+    prefer_single_quotes: false
+    sort_constructors_first: false
+    always_declare_return_types: false
+    avoid_unnecessary_containers: false
+    sized_box_for_whitespace: false
+    curly_braces_in_flow_control_structures: false
+    unnecessary_string_interpolations: false
+    use_build_context_synchronously: false

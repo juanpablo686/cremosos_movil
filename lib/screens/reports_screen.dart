@@ -62,7 +62,7 @@ class ReportsScreen extends ConsumerWidget {
                       child: _StatCard(
                           title: 'Ventas Totales',
                           value:
-                              '₱${salesReport?.totalSales.toStringAsFixed(0) ?? "0"}',
+                              '\$${salesReport?.totalSales.toStringAsFixed(0) ?? "0"}',
                           icon: Icons.attach_money,
                           color: Colors.green)),
                   const SizedBox(width: 12),
@@ -143,7 +143,7 @@ class ReportsScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('₱${product.sales.toStringAsFixed(0)}',
+                          Text('\$${product.sales.toStringAsFixed(0)}',
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           Icon(
@@ -219,7 +219,7 @@ class ReportsScreen extends ConsumerWidget {
                             const SizedBox(width: 12),
                             SizedBox(
                               width: 100,
-                              child: Text('₱${day.sales.toStringAsFixed(0)}',
+                              child: Text('\$${day.sales.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold),
                                   textAlign: TextAlign.right),
@@ -262,7 +262,7 @@ class ReportsScreen extends ConsumerWidget {
                                   SizedBox(
                                     width: 100,
                                     child: Text(
-                                        '₱${category.sales.toStringAsFixed(0)}',
+                                        '\$${category.sales.toStringAsFixed(0)}',
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold),
                                         textAlign: TextAlign.right),
