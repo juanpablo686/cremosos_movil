@@ -1,11 +1,28 @@
 # Cremosos E-Commerce 🍨
 
-Aplicación de comercio electrónico desarrollada en Flutter para la venta de postres cremosos, bebidas y toppings.
+Aplicación de comercio electrónico desarrollada en Flutter para la venta de postres cremosos, bebidas y toppings. **Incluye backend REST API con 22 endpoints funcionales.**
+
+## 🚀 INICIO RÁPIDO
+
+### Ejecución Automática (Recomendado)
+```powershell
+powershell -ExecutionPolicy Bypass -File run.ps1
+```
+
+### Credenciales de Prueba
+- **Email:** admin@cremosos.com
+- **Password:** 123456
+
+📖 **Ver `GUIA_RAPIDA.md` para instrucciones detalladas**
+
+---
 
 ## 📋 Tabla de Contenidos
 
+- [Inicio Rápido](#-inicio-rápido)
 - [Características](#características)
 - [Instalación](#instalación)
+- [Fase 2: API REST](#-fase-2-integración-api-rest)
 - [Arquitectura de Estados](#arquitectura-de-estados)
 - [Decisiones Técnicas](#decisiones-técnicas)
 - [Estructura del Proyecto](#estructura-del-proyecto)
@@ -14,6 +31,7 @@ Aplicación de comercio electrónico desarrollada en Flutter para la venta de po
 
 ## ✨ Características
 
+### Fase 1: Interfaz de Usuario
 - **Catálogo de Productos**: 140 productos organizados en 7 categorías
 - **Carrito de Compras**: Sistema completo con checkout y procesamiento de órdenes
 - **Autenticación**: Login y registro de usuarios
@@ -22,16 +40,33 @@ Aplicación de comercio electrónico desarrollada en Flutter para la venta de po
 - **Responsive**: Optimizado para web y escritorio (Windows)
 - **Hot Reload**: Desarrollo rápido con actualización en tiempo real
 
+### Fase 2: Integración API REST ✨
+- **Backend Node.js/Express**: 22 endpoints REST funcionales
+- **Autenticación JWT**: Tokens seguros con FlutterSecureStorage
+- **CRUD Completo**: Create, Read, Update, Delete en carrito
+- **Métodos HTTP**: GET, POST, PUT, DELETE correctamente implementados
+- **Serialización JSON**: Automática con json_serializable y build_runner
+- **Manejo de Estados**: DataState pattern (Loading, Success, Error, Empty)
+- **Interceptores Dio**: Inyección automática de tokens de autenticación
+- **Manejo de Errores**: Códigos HTTP 400, 401, 403, 404, 500
+- **Arquitectura Limpia**: Services → Providers → UI
+
 ## 🚀 Instalación
 
 ### Prerrequisitos
 
+**Fase 1 (Solo Flutter):**
 - Flutter SDK 3.35.6 o superior
 - Dart SDK 3.9.2 o superior
 - Chrome (para ejecución web)
 - Visual Studio 2022 con C++ Desktop Development (para Windows)
 
-### Pasos de Instalación
+**Fase 2 (Flutter + Backend):**
+- Todo lo anterior +
+- Node.js 16+ (para backend API)
+- npm o yarn
+
+### Instalación Completa (Fase 1 + Fase 2)
 
 1. **Clonar el repositorio**
 ```bash
@@ -39,23 +74,42 @@ git clone https://github.com/juanpablo686/flutter_dart-cremosos.git
 cd flutter_dart-cremosos
 ```
 
-2. **Instalar dependencias**
+2. **Instalar dependencias de Flutter**
 ```bash
 flutter pub get
 ```
 
-3. **Verificar configuración de Flutter**
+3. **Generar archivos de serialización JSON**
 ```bash
-flutter doctor
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-4. **Ejecutar en Chrome (Web)**
+4. **Instalar dependencias del backend**
 ```bash
+cd backend
+npm install
+cd ..
+```
+
+5. **Ejecutar con script automático (Windows)**
+```powershell
+powershell -ExecutionPolicy Bypass -File run.ps1
+```
+
+**O manualmente:**
+
+6a. **Terminal 1: Iniciar backend**
+```bash
+cd backend
+node server.js
+```
+
+6b. **Terminal 2: Iniciar Flutter**
+```bash
+# Web Chrome
 flutter run -d chrome
-```
 
-5. **Ejecutar en Windows**
-```bash
+# Windows
 flutter run -d windows
 ```
 
@@ -63,11 +117,177 @@ flutter run -d windows
 
 **Usuario de prueba:**
 - Email: `admin@cremosos.com`
+**Fase 1 (UI Mock):**
+- Email: `admin@cremosos.com`
 - Password: `admin123`
 
 **Usuario regular:**
 - Email: `juan@example.com`
 - Password: `password123`
+
+**Fase 2 (API Real):**
+- Email: `admin@cremosos.com`
+- Password: `123456`
+
+## 🌐 Fase 2: Integración API REST
+
+### Backend Disponible
+- **URL Base**: http://localhost:3000/api
+- **Servidor**: Node.js + Express.js
+- **Autenticación**: JWT (JSON Web Tokens)
+- **Endpoints**: 22 disponibles
+
+### Categorías de Endpoints
+
+#### 1. Autenticación (4 endpoints)
+- `POST /api/auth/login` - Login con credenciales
+- `POST /api/auth/register` - Registro de nuevo usuario
+- `GET /api/auth/profile` - Obtener perfil actual
+- `PUT /api/auth/profile` - Actualizar perfil
+
+#### 2. Productos (5 endpoints)
+- `GET /api/products` - Listar productos (con filtros y paginación)
+- `GET /api/products/:id` - Obtener producto por ID
+- `GET /api/products/featured` - Productos destacados
+- `GET /api/products/search?q=query` - Buscar productos
+- `GET /api/products/category/:category` - Productos por categoría
+
+#### 3. Carrito (6 endpoints) - CRUD Completo
+- `GET /api/cart/:userId` - Obtener carrito
+- `POST /api/cart/:userId/items` - Agregar item (CREATE)
+- `PUT /api/cart/:userId/items/:itemId` - Actualizar cantidad (UPDATE)
+- `DELETE /api/cart/:userId/items/:itemId` - Eliminar item (DELETE)
+- `POST /api/cart/:userId/clear` - Vaciar carrito
+- `POST /api/cart/:userId/sync` - Sincronizar carrito
+
+#### 4. Órdenes (5 endpoints)
+- `POST /api/orders` - Crear orden desde carrito
+- `GET /api/orders/user/:userId` - Historial de órdenes
+- `GET /api/orders/:id` - Obtener orden por ID
+- `PUT /api/orders/:id/cancel` - Cancelar orden
+- `GET /api/orders/:id/track` - Rastrear envío
+
+#### 5. Reportes (4 endpoints)
+- `GET /api/reports/dashboard` - Dashboard con KPIs
+- `GET /api/reports/sales` - Reporte de ventas
+- `GET /api/reports/products` - Reporte de productos
+- `GET /api/reports/customers` - Reporte de clientes
+
+### Arquitectura de Integración
+
+```
+┌──────────────────────────────────────────────────┐
+│              Flutter App (UI)                    │
+│  ┌────────────────────────────────────────────┐  │
+│  │         Screens (Widgets)                  │  │
+│  └────────────┬───────────────────────────────┘  │
+│               │ consume                          │
+│  ┌────────────▼───────────────────────────────┐  │
+│  │    Providers (Riverpod StateNotifier)     │  │
+│  └────────────┬───────────────────────────────┘  │
+│               │ call methods                     │
+│  ┌────────────▼───────────────────────────────┐  │
+│  │       Services (API Communication)        │  │
+│  │  - AuthService                            │  │
+│  │  - ProductService                         │  │
+│  │  - CartService                            │  │
+│  │  - OrderService                           │  │
+│  │  - ReportService                          │  │
+│  └────────────┬───────────────────────────────┘  │
+│               │ HTTP requests                    │
+│  ┌────────────▼───────────────────────────────┐  │
+│  │      Dio Client (with Interceptors)       │  │
+│  │  - Token injection                        │  │
+│  │  - Error handling                         │  │
+│  │  - Logging                                │  │
+│  └────────────┬───────────────────────────────┘  │
+└───────────────┼──────────────────────────────────┘
+                │ REST API calls
+┌───────────────▼──────────────────────────────────┐
+│           Backend Server (Node.js)               │
+│  ┌────────────────────────────────────────────┐  │
+│  │      Express Routes + Middleware           │  │
+│  │  - CORS                                    │  │
+│  │  - JWT Authentication                      │  │
+│  │  - JSON parsing                            │  │
+│  └────────────┬───────────────────────────────┘  │
+│               │                                  │
+│  ┌────────────▼───────────────────────────────┐  │
+│  │      In-Memory Data Storage                │  │
+│  │  - Users array                             │  │
+│  │  - Products array                          │  │
+│  │  - Carts object                            │  │
+│  │  - Orders array                            │  │
+│  └────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────┘
+```
+
+### Flujo de Autenticación JWT
+
+```
+1. Usuario ingresa credenciales en LoginScreen
+         ↓
+2. AuthService.login() envía POST /api/auth/login
+         ↓
+3. Backend valida y genera JWT token
+         ↓
+4. Flutter recibe token y lo guarda en FlutterSecureStorage
+         ↓
+5. Interceptor Dio inyecta automáticamente token en todas las peticiones
+         ↓
+6. Backend middleware verifica token en cada request
+```
+
+### Manejo de Estados DataState
+
+```dart
+// Pattern utilizado en todas las respuestas
+sealed class DataState<T> {
+  const DataState();
+}
+
+class DataInitial<T> extends DataState<T> {}
+class DataLoading<T> extends DataState<T> {}
+class DataSuccess<T> extends DataState<T> {
+  final T data;
+}
+class DataError<T> extends DataState<T> {
+  final String message;
+  final int? statusCode;
+}
+class DataEmpty<T> extends DataState<T> {}
+```
+
+### Serialización JSON Automática
+
+Todos los modelos utilizan `json_serializable`:
+
+```dart
+@JsonSerializable()
+class ProductApi {
+  final String id;
+  final String name;
+  final double price;
+  
+  factory ProductApi.fromJson(Map<String, dynamic> json) => 
+    _$ProductApiFromJson(json);
+  
+  Map<String, dynamic> toJson() => _$ProductApiToJson(this);
+}
+```
+
+Archivos `.g.dart` generados con:
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### Documentación Adicional
+
+- **GUIA_RAPIDA.md**: Instrucciones de ejecución y testing
+- **CUMPLIMIENTO_FASE2.md**: Checklist de requisitos (95% completo)
+- **COMO_PROBAR_API.md**: Guía para probar los 22 endpoints
+- **INTEGRACION_API.md**: Documentación técnica detallada
+- **backend/README.md**: Documentación del servidor
 
 ## 🏗️ Arquitectura de Estados
 
