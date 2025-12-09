@@ -2,8 +2,9 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/product.dart';
+import '../services/product_service.dart';
 import '../data/products_data.dart';
-import '../data/users_data.dart';
+import 'auth_provider.dart';
 
 // Estado de productos
 class ProductsState {
@@ -85,31 +86,60 @@ enum ProductSortOption {
 
 // Notificador de productos
 class ProductsNotifier extends StateNotifier<ProductsState> {
-  ProductsNotifier()
-      : super(ProductsState(
-          allProducts: allProducts,
-          filteredProducts: allProducts,
-        )) {
+  final Ref ref;
+
+  ProductsNotifier(this.ref)
+    : super(ProductsState(allProducts: [], filteredProducts: [])) {
     _loadProducts();
   }
 
   Future<void> _loadProducts() async {
     state = state.copyWith(isLoading: true);
 
-    // Simular delay de carga de API (500ms-1.5s)
-    await Future.delayed(
-      Duration(milliseconds: 500 + (DateTime.now().millisecond % 1000)),
-    );
+    try {
+      // Cargar productos desde el backend
+      final apiService = ref.read(apiServiceProvider);
+      final productService = ProductService(apiService);
+      final productsData = await productService.getAllProducts();
 
-    _applyFilters();
+      // Convertir los datos del backend a objetos Product
+      final products = productsData
+          .map((json) => Product.fromJson(json))
+          .toList();
 
-    state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        allProducts: products,
+        filteredProducts: products,
+        isLoading: false,
+      );
+
+      // Aplicar filtros actuales
+      _applyFilters();
+    } catch (e) {
+      print('Error cargando productos desde backend: $e');
+      print('Usando datos mock como fallback...');
+      // Si falla el backend, usar datos mock como fallback
+      state = state.copyWith(
+        allProducts: allProductsComplete,
+        filteredProducts: allProductsComplete,
+        isLoading: false,
+      );
+      _applyFilters();
+    }
+  }
+
+  // Método público para refrescar productos
+  Future<void> refresh() async {
+    await _loadProducts();
   }
 
   // Filtrar por categoría con simulación asíncrona
   Future<void> filterByCategory(ProductCategory? category) async {
     state = state.copyWith(
-        isLoading: true, selectedCategory: category, currentPage: 1);
+      isLoading: true,
+      selectedCategory: category,
+      currentPage: 1,
+    );
 
     // Simular delay
     await Future.delayed(const Duration(milliseconds: 300));
@@ -142,20 +172,13 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 
   // Filtrar por precio
   void filterByPrice(double min, double max) {
-    state = state.copyWith(
-      minPrice: min,
-      maxPrice: max,
-      currentPage: 1,
-    );
+    state = state.copyWith(minPrice: min, maxPrice: max, currentPage: 1);
     _applyFilters();
   }
 
   // Filtrar por rating
   void filterByRating(double minRating) {
-    state = state.copyWith(
-      minRating: minRating,
-      currentPage: 1,
-    );
+    state = state.copyWith(minRating: minRating, currentPage: 1);
     _applyFilters();
   }
 
@@ -182,8 +205,9 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 
     // Filtrar por categoría
     if (state.selectedCategory != null) {
-      filtered =
-          filtered.where((p) => p.category == state.selectedCategory).toList();
+      filtered = filtered
+          .where((p) => p.category == state.selectedCategory)
+          .toList();
     }
 
     // Buscar por texto
@@ -198,9 +222,11 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 
     // Filtrar por precio
     filtered = filtered
-        .where((p) =>
-            p.effectivePrice >= state.minPrice &&
-            p.effectivePrice <= state.maxPrice)
+        .where(
+          (p) =>
+              p.effectivePrice >= state.minPrice &&
+              p.effectivePrice <= state.maxPrice,
+        )
         .toList();
 
     // Filtrar por rating
@@ -236,45 +262,53 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 }
 
 // Provider de productos
-final productsProvider =
-    StateNotifierProvider<ProductsNotifier, ProductsState>((ref) {
-  return ProductsNotifier();
-});
+final productsProvider = StateNotifierProvider<ProductsNotifier, ProductsState>(
+  (ref) {
+    return ProductsNotifier(ref);
+  },
+);
 
 // Provider de producto por ID
 final productByIdProvider = Provider.family<Product?, String>((ref, id) {
-  return getProductById(id);
+  final state = ref.watch(productsProvider);
+  try {
+    return state.allProducts.firstWhere((p) => p.id == id);
+  } catch (e) {
+    return null;
+  }
 });
 
 // Provider de productos destacados
 final featuredProductsProvider = Provider<List<Product>>((ref) {
-  return getFeaturedProducts();
+  final state = ref.watch(productsProvider);
+  return state.allProducts.where((p) => p.featured == true).toList();
 });
 
 // Provider de productos en oferta
 final onSaleProductsProvider = Provider<List<Product>>((ref) {
-  return getProductsOnSale();
-});
-
-// Provider de toppings disponibles
-final availableToppingsProvider = Provider<List<Product>>((ref) {
-  return availableToppings;
+  final state = ref.watch(productsProvider);
+  return state.allProducts.where((p) => p.onSale == true).toList();
 });
 
 // Provider de productos relacionados
-final relatedProductsProvider =
-    Provider.family<List<Product>, String>((ref, productId) {
-  final product = getProductById(productId);
+final relatedProductsProvider = Provider.family<List<Product>, String>((
+  ref,
+  productId,
+) {
+  final state = ref.watch(productsProvider);
+  final product = ref.watch(productByIdProvider(productId));
   if (product == null) return [];
 
-  return getProductsByCategory(product.category)
-      .where((p) => p.id != productId)
+  return state.allProducts
+      .where((p) => p.category == product.category && p.id != productId)
       .take(4)
       .toList();
 });
 
-// Provider de reviews por producto
-final productReviewsProvider =
-    Provider.family<List<Review>, String>((ref, productId) {
-  return getProductReviews(productId);
+// Provider de reviews por producto (temporal - devuelve lista vacía, implementar cuando haya endpoint)
+final productReviewsProvider = Provider.family<List<Review>, String>((
+  ref,
+  productId,
+) {
+  return [];
 });

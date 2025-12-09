@@ -33,12 +33,31 @@ class AuthService {
 
       // Si la respuesta es exitosa (status 200-299)
       if (response.statusCode == 200) {
-        final responseData = response.data;
+        // Validar que response.data no sea null
+        if (response.data == null) {
+          throw Exception('Respuesta vacía del servidor');
+        }
+
+        print('📥 Login response.data type: ${response.data.runtimeType}');
+        print('📥 Login response.data: ${response.data}');
+
+        // El backend retorna: { "success": true, "data": { "token": "...", "user": {...} } }
+        final responseMap = response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : throw Exception(
+                'Respuesta del servidor no es un objeto JSON válido',
+              );
+
+        if (responseMap['data'] == null) {
+          throw Exception('Datos de autenticación no encontrados');
+        }
+
+        final responseData = responseMap['data'] as Map<String, dynamic>;
 
         // Guardar token JWT de forma segura
         // EXPLICAR: El token se usa para autenticar futuras peticiones
         if (responseData['token'] != null) {
-          await _apiService.setAuthToken(responseData['token']);
+          await _apiService.setAuthToken(responseData['token'] as String);
         }
 
         return responseData;
@@ -71,7 +90,8 @@ class AuthService {
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final responseData = response.data;
+        // El backend retorna: { "success": true, "data": { "token": "...", "user": {...} } }
+        final responseData = response.data['data'] as Map<String, dynamic>;
 
         // Guardar token automáticamente después de registro exitoso
         if (responseData['token'] != null) {
@@ -98,7 +118,9 @@ class AuthService {
       final response = await _apiService.get(ApiConfig.profileEndpoint);
 
       if (response.statusCode == 200) {
-        return response.data;
+        // El backend retorna: { "success": true, "data": {...user} }
+        // Envolver en "user" para mantener consistencia con login
+        return {'user': response.data['data']};
       } else {
         throw Exception('Error al obtener perfil');
       }
@@ -113,25 +135,19 @@ class AuthService {
   ///
   /// Request body: { "name": "Juan Pablo", "phone": "+57 300 123 4567" }
   /// Response: { "id": 1, "name": "Juan Pablo", "phone": "+57 300 123 4567", ... }
-  Future<Map<String, dynamic>> updateProfile({
-    required String name,
-    String? phone,
-    String? address,
-  }) async {
+  Future<Map<String, dynamic>> updateProfile(
+    Map<String, dynamic> updates,
+  ) async {
     try {
-      final data = {
-        'name': name,
-        if (phone != null) 'phone': phone,
-        if (address != null) 'address': address,
-      };
-
       final response = await _apiService.put(
         ApiConfig.updateProfileEndpoint,
-        data: data,
+        data: updates,
       );
 
       if (response.statusCode == 200) {
-        return response.data;
+        // El backend retorna: { "success": true, "data": {...user} }
+        // Envolver en "user" para mantener consistencia
+        return {'user': response.data['data']};
       } else {
         throw Exception('Error al actualizar perfil');
       }

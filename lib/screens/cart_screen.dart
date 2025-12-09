@@ -40,19 +40,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Vaciar carrito'),
-                    content:
-                        const Text('¿Seguro que deseas vaciar el carrito?'),
+                    content: const Text(
+                      '¿Seguro que deseas vaciar el carrito?',
+                    ),
                     actions: [
                       TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancelar')),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancelar'),
+                      ),
                       TextButton(
                         onPressed: () {
                           ref.read(cartProvider.notifier).clear();
                           Navigator.pop(ctx);
                         },
-                        child: const Text('Vaciar',
-                            style: TextStyle(color: Colors.red)),
+                        child: const Text(
+                          'Vaciar',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ),
                     ],
                   ),
@@ -64,21 +68,36 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       ),
       body: cartState.items.isEmpty
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_cart_outlined,
-                      size: 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  const Text('Tu carrito está vacío',
-                      style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.shopping_bag),
-                    label: const Text('Continuar comprando'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 100,
+                      color: Colors.grey.shade300,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Tu carrito está vacío',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Agrega productos desde la pestaña "Productos"',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           : Column(
@@ -92,11 +111,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       final cartItem = itemData['item'] as CartItem;
                       final product = itemData['product'] as Product;
                       final toppings = itemData['toppings'] as List<Product>;
-                      final toppingsTotal =
-                          toppings.fold<double>(0, (sum, t) => sum + t.price);
+                      final toppingsTotal = toppings.fold<double>(
+                        0,
+                        (sum, t) => sum + t.price,
+                      );
                       final itemTotal =
                           (product.effectivePrice + toppingsTotal) *
-                              cartItem.quantity;
+                          cartItem.quantity;
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -128,30 +149,34 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                     Text(
                                       product.name,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       '\$${product.effectivePrice.toStringAsFixed(0)}',
                                       style: const TextStyle(
-                                          color: Colors.deepPurple,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600),
+                                        color: Colors.deepPurple,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     if (toppings.isNotEmpty) ...[
                                       const SizedBox(height: 4),
                                       Text(
                                         'Toppings: ${toppings.map((t) => t.name).join(", ")}',
                                         style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600),
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
                                       ),
                                       Text(
                                         '+\$${toppingsTotal.toStringAsFixed(0)}',
                                         style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600),
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
                                       ),
                                     ],
                                     const SizedBox(height: 8),
@@ -160,9 +185,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                         Container(
                                           decoration: BoxDecoration(
                                             border: Border.all(
-                                                color: Colors.grey.shade300),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
+                                              color: Colors.grey.shade300,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
@@ -178,14 +205,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                                     ),
                                                 child: const Padding(
                                                   padding: EdgeInsets.all(8),
-                                                  child: Icon(Icons.remove,
-                                                      size: 18),
+                                                  child: Icon(
+                                                    Icons.remove,
+                                                    size: 18,
+                                                  ),
                                                 ),
                                               ),
-                                              Text('${cartItem.quantity}',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
+                                              Text(
+                                                '${cartItem.quantity}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
                                               InkWell(
                                                 onTap: () => ref
                                                     .read(cartProvider.notifier)
@@ -197,8 +228,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                                     ),
                                                 child: const Padding(
                                                   padding: EdgeInsets.all(8),
-                                                  child:
-                                                      Icon(Icons.add, size: 18),
+                                                  child: Icon(
+                                                    Icons.add,
+                                                    size: 18,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -208,8 +241,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                         Text(
                                           '\$${itemTotal.toStringAsFixed(0)}',
                                           style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -217,13 +251,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.red),
-                                onPressed: () =>
-                                    ref.read(cartProvider.notifier).removeItem(
-                                          cartItem.productId,
-                                          toppings: cartItem.selectedToppings,
-                                        ),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => ref
+                                    .read(cartProvider.notifier)
+                                    .removeItem(
+                                      cartItem.productId,
+                                      toppings: cartItem.selectedToppings,
+                                    ),
                               ),
                             ],
                           ),
@@ -240,9 +277,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 8,
-                          offset: const Offset(0, -2))
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
                     ],
                   ),
                   child: SafeArea(
@@ -258,12 +296,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                   labelText: 'Código de cupón',
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   isDense: true,
                                   suffixIcon: cartState.couponCode != null
                                       ? IconButton(
-                                          icon:
-                                              const Icon(Icons.close, size: 18),
+                                          icon: const Icon(
+                                            Icons.close,
+                                            size: 18,
+                                          ),
                                           onPressed: () {
                                             ref
                                                 .read(cartProvider.notifier)
@@ -280,27 +322,30 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             ElevatedButton(
                               onPressed: cartState.couponCode == null
                                   ? () {
-                                      final code =
-                                          _couponController.text.trim();
+                                      final code = _couponController.text
+                                          .trim();
                                       if (code.isNotEmpty) {
                                         ref
                                             .read(cartProvider.notifier)
                                             .applyCoupon(code);
                                         // Wait a frame to check if coupon was applied
                                         Future.delayed(Duration.zero, () {
-                                          final newState =
-                                              ref.read(cartProvider);
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          final newState = ref.read(
+                                            cartProvider,
+                                          );
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
                                               content: Text(
-                                                  newState.couponCode != null
-                                                      ? 'Cupón aplicado'
-                                                      : 'Cupón inválido'),
+                                                newState.couponCode != null
+                                                    ? 'Cupón aplicado'
+                                                    : 'Cupón inválido',
+                                              ),
                                               backgroundColor:
                                                   newState.couponCode != null
-                                                      ? Colors.green
-                                                      : Colors.red,
+                                                  ? Colors.green
+                                                  : Colors.red,
                                             ),
                                           );
                                         });
@@ -323,12 +368,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                         ],
                         _PriceRow(
-                            label: 'Impuesto (16%)', value: cartState.tax),
+                          label: 'Impuesto (16%)',
+                          value: cartState.tax,
+                        ),
                         _PriceRow(
-                            label: 'Envío',
-                            value: cartState.shipping,
-                            valueColor:
-                                cartState.shipping == 0 ? Colors.green : null),
+                          label: 'Envío',
+                          value: cartState.shipping,
+                          valueColor: cartState.shipping == 0
+                              ? Colors.green
+                              : null,
+                        ),
                         const Divider(thickness: 2),
                         _PriceRow(
                           label: 'Total',
@@ -345,8 +394,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               if (!isAuthenticated) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content:
-                                          Text('Inicia sesión para continuar')),
+                                    content: Text(
+                                      'Inicia sesión para continuar',
+                                    ),
+                                  ),
                                 );
                                 return;
                               }
@@ -355,8 +406,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             icon: const Icon(Icons.payment),
                             label: const Text('PROCEDER AL PAGO'),
                             style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
                           ),
                         ),
                       ],
@@ -369,7 +420,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   void _showCheckoutDialog(
-      BuildContext context, WidgetRef ref, Cart cartState) {
+    BuildContext context,
+    WidgetRef ref,
+    Cart cartState,
+  ) {
     final user = ref.read(currentUserProvider);
 
     showDialog(
@@ -456,6 +510,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   void _processOrder(BuildContext context, WidgetRef ref, Cart cartState) {
+    // Limpiar carrito INMEDIATAMENTE
+    ref.read(cartProvider.notifier).clear();
+
     // Mostrar loading
     showDialog(
       context: context,
@@ -479,10 +536,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     // Simular procesamiento
     Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context); // Cerrar loading
+      // Verificar que el contexto aún esté montado
+      if (!context.mounted) return;
 
-      // Limpiar carrito
-      ref.read(cartProvider.notifier).clear();
+      Navigator.pop(context); // Cerrar loading
 
       // Mostrar éxito
       showDialog(
@@ -548,12 +605,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ],
           ),
           actions: [
-            TextButton(
+            ElevatedButton.icon(
               onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context); // Volver a home
+                Navigator.of(ctx).pop(); // Cerrar diálogo
               },
-              child: const Text('Continuar comprando'),
+              icon: const Icon(Icons.check),
+              label: const Text('Entendido'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
@@ -568,11 +629,12 @@ class _PriceRow extends StatelessWidget {
   final bool isTotal;
   final Color? valueColor;
 
-  const _PriceRow(
-      {required this.label,
-      required this.value,
-      this.isTotal = false,
-      this.valueColor});
+  const _PriceRow({
+    required this.label,
+    required this.value,
+    this.isTotal = false,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {

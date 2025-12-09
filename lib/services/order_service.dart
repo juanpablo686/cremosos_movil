@@ -73,6 +73,10 @@ class OrderService {
   ///
   /// Query parameters opcionales:
   /// - status: Filtrar por estado (pending, completed, cancelled)
+  /// - startDate: Fecha de inicio para filtro
+  /// - endDate: Fecha de fin para filtro
+  /// - customerId: ID del cliente (solo admin/employee)
+  /// - search: Búsqueda por número de orden
   /// - page: Número de página
   /// - limit: Cantidad de órdenes por página
   ///
@@ -87,12 +91,18 @@ class OrderService {
   ///       ...
   ///     }
   ///   ],
-  ///   "total": 15,
-  ///   "page": 1,
-  ///   "pages": 2
+  ///   "meta": {
+  ///     "total": 15,
+  ///     "page": 1,
+  ///     "totalPages": 2
+  ///   }
   /// }
   Future<Map<String, dynamic>> getOrderHistory({
     String? status,
+    String? startDate,
+    String? endDate,
+    String? customerId,
+    String? search,
     int? page,
     int? limit,
   }) async {
@@ -100,6 +110,10 @@ class OrderService {
       final queryParams = <String, dynamic>{};
 
       if (status != null) queryParams['status'] = status;
+      if (startDate != null) queryParams['startDate'] = startDate;
+      if (endDate != null) queryParams['endDate'] = endDate;
+      if (customerId != null) queryParams['customerId'] = customerId;
+      if (search != null) queryParams['search'] = search;
       if (page != null) queryParams['page'] = page;
       if (limit != null) queryParams['limit'] = limit;
 

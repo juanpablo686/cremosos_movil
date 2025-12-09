@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/cart.dart';
-import '../data/products_data.dart';
+import '../models/product.dart';
+import '../constants/toppings.dart' as AppToppings;
+import '../data/products_data.dart' show getProductById;
+import 'products_provider.dart';
 
 // Cupones disponibles
 class Coupon {
@@ -61,8 +64,21 @@ final availableCoupons = [
 
 // Notificador del carrito
 class CartNotifier extends StateNotifier<Cart> {
-  CartNotifier() : super(Cart.empty()) {
+  final Ref ref;
+
+  CartNotifier(this.ref) : super(Cart.empty()) {
     _loadCart();
+  }
+
+  // Obtener producto por ID desde el provider o fallback a mock
+  Product? _getProduct(String productId) {
+    try {
+      final productsState = ref.read(productsProvider);
+      return productsState.allProducts.firstWhere((p) => p.id == productId);
+    } catch (e) {
+      // Fallback a datos mock si no está en el provider
+      return getProductById(productId);
+    }
   }
 
   // Cargar carrito guardado
@@ -91,9 +107,12 @@ class CartNotifier extends StateNotifier<Cart> {
   }
 
   // Agregar item
-  void addItem(String productId,
-      {int quantity = 1, List<String> toppings = const []}) {
-    final product = getProductById(productId);
+  void addItem(
+    String productId, {
+    int quantity = 1,
+    List<String> toppings = const [],
+  }) {
+    final product = _getProduct(productId);
     if (product == null) return;
 
     final existingIndex = state.items.indexWhere(
@@ -132,8 +151,9 @@ class CartNotifier extends StateNotifier<Cart> {
   void removeItem(String productId, {List<String> toppings = const []}) {
     final updatedItems = state.items
         .where(
-          (item) => !(item.productId == productId &&
-              _listEquals(item.selectedToppings, toppings)),
+          (item) =>
+              !(item.productId == productId &&
+                  _listEquals(item.selectedToppings, toppings)),
         )
         .toList();
 
@@ -143,8 +163,11 @@ class CartNotifier extends StateNotifier<Cart> {
   }
 
   // Actualizar cantidad
-  void updateQuantity(String productId, int quantity,
-      {List<String> toppings = const []}) {
+  void updateQuantity(
+    String productId,
+    int quantity, {
+    List<String> toppings = const [],
+  }) {
     if (quantity <= 0) {
       removeItem(productId, toppings: toppings);
       return;
@@ -200,20 +223,20 @@ class CartNotifier extends StateNotifier<Cart> {
     int subtotal = 0;
 
     for (final item in state.items) {
-      final product = getProductById(item.productId);
+      final product = _getProduct(item.productId);
       if (product != null) {
-        int itemPrice = product.effectivePrice.round() * item.quantity;
+        double itemPrice = product.effectivePrice * item.quantity;
 
         // Agregar precio de toppings
         for (final toppingId in item.selectedToppings) {
-          final topping = availableToppings.firstWhere(
+          final topping = AppToppings.availableToppings.firstWhere(
             (t) => t.id == toppingId,
-            orElse: () => availableToppings.first,
+            orElse: () => AppToppings.availableToppings.first,
           );
-          itemPrice += topping.price.round() * item.quantity;
+          itemPrice += topping.price * item.quantity;
         }
 
-        subtotal += itemPrice;
+        subtotal += itemPrice.round();
       }
     }
 
@@ -258,7 +281,7 @@ class CartNotifier extends StateNotifier<Cart> {
 
 // Provider del carrito
 final cartProvider = StateNotifierProvider<CartNotifier, Cart>((ref) {
-  return CartNotifier();
+  return CartNotifier(ref);
 });
 
 // Provider de cantidad de items
@@ -279,19 +302,28 @@ final cartTotalProvider = Provider<String>((ref) {
 });
 
 // Provider de items con detalles de producto
-final cartItemsWithDetailsProvider =
-    Provider<List<Map<String, dynamic>>>((ref) {
+final cartItemsWithDetailsProvider = Provider<List<Map<String, dynamic>>>((
+  ref,
+) {
   final cart = ref.watch(cartProvider);
+  final productsState = ref.watch(productsProvider);
+
   return cart.items.map((item) {
-    final product = getProductById(item.productId);
+    Product? product;
+    try {
+      product = productsState.allProducts.firstWhere(
+        (p) => p.id == item.productId,
+      );
+    } catch (e) {
+      product = null;
+    }
+
     final toppings = item.selectedToppings
-        .map((id) => availableToppings.firstWhere((t) => t.id == id))
+        .map(
+          (id) => AppToppings.availableToppings.firstWhere((t) => t.id == id),
+        )
         .toList();
 
-    return {
-      'item': item,
-      'product': product,
-      'toppings': toppings,
-    };
+    return {'item': item, 'product': product, 'toppings': toppings};
   }).toList();
 });

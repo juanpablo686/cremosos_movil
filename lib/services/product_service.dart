@@ -120,4 +120,108 @@ class ProductService {
   Future<List<dynamic>> getProductsByCategory(String category) async {
     return getAllProducts(category: category);
   }
+
+  /// CREATE PRODUCT - POST /api/products
+  /// Crear un nuevo producto (solo admin/employee)
+  /// EXPLICAR: Envía datos del producto en el body de la petición
+  Future<Map<String, dynamic>> createProduct({
+    required String name,
+    required String description,
+    required double price,
+    required String category,
+    String? imageUrl,
+    int? stock,
+    bool? isFeatured,
+    List<String>? compatibleToppings,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        ApiConfig.productsEndpoint,
+        data: {
+          'name': name,
+          'description': description,
+          'price': price,
+          'category': category,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+          if (stock != null) 'stock': stock,
+          if (isFeatured != null) 'isFeatured': isFeatured,
+          if (compatibleToppings != null)
+            'compatibleToppings': compatibleToppings,
+        },
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return response.data['data'] ?? response.data;
+      } else {
+        throw Exception(response.data['message'] ?? 'Error al crear producto');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// UPDATE PRODUCT - PUT /api/products/{id}
+  /// Actualizar un producto existente (solo admin/employee)
+  /// EXPLICAR: Usa método PUT y permite actualización parcial
+  Future<Map<String, dynamic>> updateProduct({
+    required String productId,
+    String? name,
+    String? description,
+    double? price,
+    String? imageUrl,
+    String? category,
+    int? stock,
+    bool? isFeatured,
+    bool? isAvailable,
+    List<String>? compatibleToppings,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+
+      if (name != null) data['name'] = name;
+      if (description != null) data['description'] = description;
+      if (price != null) data['price'] = price;
+      if (imageUrl != null) data['imageUrl'] = imageUrl;
+      if (category != null) data['category'] = category;
+      if (stock != null) data['stock'] = stock;
+      if (isFeatured != null) data['isFeatured'] = isFeatured;
+      if (isAvailable != null) data['isAvailable'] = isAvailable;
+      if (compatibleToppings != null)
+        data['compatibleToppings'] = compatibleToppings;
+
+      final response = await _apiService.put(
+        '${ApiConfig.productDetailEndpoint}/$productId',
+        data: data,
+      );
+
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? response.data;
+      } else {
+        throw Exception(
+          response.data['message'] ?? 'Error al actualizar producto',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// DELETE PRODUCT - DELETE /api/products/{id}
+  /// Eliminar un producto (solo admin)
+  /// EXPLICAR: Usa método DELETE para eliminar permanentemente
+  Future<void> deleteProduct(String productId) async {
+    try {
+      final response = await _apiService.delete(
+        '${ApiConfig.productDetailEndpoint}/$productId',
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          response.data['message'] ?? 'Error al eliminar producto',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

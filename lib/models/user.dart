@@ -37,19 +37,25 @@ class User {
       phone: json['phone'] as String?,
       birthDate: json['birthDate'] as String?,
       avatar: json['avatar'] as String?,
-      addresses: (json['addresses'] as List<dynamic>?)
+      addresses:
+          (json['addresses'] as List<dynamic>?)
               ?.map((e) => Address.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       role: UserRole.fromString(json['role'] as String),
-      preferences: UserPreferences.fromJson(
-        json['preferences'] as Map<String, dynamic>,
-      ),
-      paymentMethods: (json['paymentMethods'] as List<dynamic>?)
+      preferences: json['preferences'] != null
+          ? UserPreferences.fromJson(
+              json['preferences'] as Map<String, dynamic>,
+            )
+          : UserPreferences(), // Valores por defecto si no vienen del servidor
+      paymentMethods:
+          (json['paymentMethods'] as List<dynamic>?)
               ?.map((e) => PaymentMethod.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(), // Fecha actual si no viene del servidor
       isActive: json['isActive'] as bool? ?? true,
     );
   }

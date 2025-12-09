@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../services/order_service.dart';
 import '../data/users_data.dart' show getUserOrders;
 import '../models/cart.dart';
 import 'auth_screen.dart';
@@ -15,6 +16,49 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  List<Order>? _userOrders;
+  bool _isLoadingOrders = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOrders();
+  }
+
+  Future<void> _loadOrders() async {
+    setState(() => _isLoadingOrders = true);
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final orderService = OrderService(apiService);
+      final response = await orderService.getOrderHistory();
+
+      if (response['orders'] != null) {
+        setState(() {
+          _userOrders = (response['orders'] as List)
+              .map((json) => Order.fromJson(json))
+              .toList();
+          _isLoadingOrders = false;
+        });
+      }
+    } catch (e) {
+      print('Error cargando órdenes desde backend: $e');
+      print('Usando datos mock como fallback...');
+      // Usar datos mock como fallback
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null) {
+        setState(() {
+          _userOrders = getUserOrders(currentUser.id);
+          _isLoadingOrders = false;
+        });
+      } else {
+        setState(() {
+          _userOrders = [];
+          _isLoadingOrders = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
@@ -49,7 +93,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     }
 
-    final userOrders = getUserOrders(currentUser.id);
+    final userOrders = _userOrders ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -195,8 +239,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Text(
                     'Mi cuenta',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -254,8 +298,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Text(
                     'Acciones rápidas',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -316,11 +360,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Text(
                     'Historial de pedidos',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  if (userOrders.isEmpty)
+                  if (_isLoadingOrders)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (userOrders.isEmpty)
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
@@ -427,8 +478,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _showEditProfileDialog(BuildContext context, currentUser) {
     final nameController = TextEditingController(text: currentUser.name);
-    final phoneController =
-        TextEditingController(text: currentUser.phone ?? '');
+    final phoneController = TextEditingController(
+      text: currentUser.phone ?? '',
+    );
 
     showDialog(
       context: context,
@@ -566,17 +618,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   Expanded(
                     child: const TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Ciudad',
-                      ),
+                      decoration: InputDecoration(labelText: 'Ciudad'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: const TextField(
-                      decoration: InputDecoration(
-                        labelText: 'C.P.',
-                      ),
+                      decoration: InputDecoration(labelText: 'C.P.'),
                       keyboardType: TextInputType.number,
                     ),
                   ),
@@ -896,10 +944,7 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
             textAlign: TextAlign.center,
           ),
         ],
@@ -937,10 +982,7 @@ class _ActionCard extends StatelessWidget {
           ),
           child: Icon(icon, color: color),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
       ),

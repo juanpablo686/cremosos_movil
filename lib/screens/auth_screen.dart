@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
-import '../models/user.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -43,22 +42,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     try {
       if (_isLogin) {
-        await ref.read(authProvider.notifier).login(
-              _emailController.text.trim(),
-              _passwordController.text,
-            );
+        await ref
+            .read(authProvider.notifier)
+            .login(_emailController.text.trim(), _passwordController.text);
       } else {
-        final registerData = RegisterData(
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          confirmPassword: _confirmPasswordController.text,
-          phone: _phoneController.text.trim().isEmpty
+        // Registro - convertir a Map para el provider
+        await ref.read(authProvider.notifier).register({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+          'phone': _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          acceptTerms: _acceptTerms,
-        );
-        await ref.read(authProvider.notifier).register(registerData);
+        });
       }
 
       // No hacer Navigator.pop - dejar que el estado maneje la navegación automáticamente
@@ -66,7 +62,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                _isLogin ? '¡Bienvenido!' : '¡Cuenta creada exitosamente!'),
+              _isLogin ? '¡Bienvenido!' : '¡Cuenta creada exitosamente!',
+            ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
@@ -101,7 +98,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               child: Card(
                 elevation: 8,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Form(
@@ -109,16 +107,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.restaurant_menu,
-                            size: 64, color: Colors.deepPurple),
+                        const Icon(
+                          Icons.restaurant_menu,
+                          size: 64,
+                          color: Colors.deepPurple,
+                        ),
                         const SizedBox(height: 16),
-                        Text('Cremosos',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.deepPurple)),
+                        Text(
+                          'Cremosos',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepPurple,
+                              ),
+                        ),
                         const SizedBox(height: 8),
                         Text(_isLogin ? 'Inicia sesión' : 'Crea tu cuenta'),
                         const SizedBox(height: 24),
@@ -126,9 +128,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           TextFormField(
                             controller: _nameController,
                             decoration: const InputDecoration(
-                                labelText: 'Nombre',
-                                prefixIcon: Icon(Icons.person),
-                                border: OutlineInputBorder()),
+                              labelText: 'Nombre',
+                              prefixIcon: Icon(Icons.person),
+                              border: OutlineInputBorder(),
+                            ),
                             validator: (v) => v == null || v.isEmpty
                                 ? 'Ingresa tu nombre'
                                 : null,
@@ -139,14 +142,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
-                              labelText: 'Email',
-                              prefixIcon: Icon(Icons.email),
-                              border: OutlineInputBorder()),
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email),
+                            border: OutlineInputBorder(),
+                          ),
                           validator: (v) => v == null || v.isEmpty
                               ? 'Ingresa email'
                               : !v.contains('@')
-                                  ? 'Email inválido'
-                                  : null,
+                              ? 'Email inválido'
+                              : null,
                         ),
                         const SizedBox(height: 16),
                         if (!_isLogin) ...[
@@ -154,9 +158,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             decoration: const InputDecoration(
-                                labelText: 'Teléfono (opcional)',
-                                prefixIcon: Icon(Icons.phone),
-                                border: OutlineInputBorder()),
+                              labelText: 'Teléfono (opcional)',
+                              prefixIcon: Icon(Icons.phone),
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -164,14 +169,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           controller: _passwordController,
                           obscureText: true,
                           decoration: const InputDecoration(
-                              labelText: 'Contraseña',
-                              prefixIcon: Icon(Icons.lock),
-                              border: OutlineInputBorder()),
+                            labelText: 'Contraseña',
+                            prefixIcon: Icon(Icons.lock),
+                            border: OutlineInputBorder(),
+                          ),
                           validator: (v) => v == null || v.isEmpty
                               ? 'Ingresa contraseña'
                               : !_isLogin && v.length < 6
-                                  ? 'Mínimo 6 caracteres'
-                                  : null,
+                              ? 'Mínimo 6 caracteres'
+                              : null,
                         ),
                         const SizedBox(height: 16),
                         if (!_isLogin) ...[
@@ -179,9 +185,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             controller: _confirmPasswordController,
                             obscureText: true,
                             decoration: const InputDecoration(
-                                labelText: 'Confirmar',
-                                prefixIcon: Icon(Icons.lock_outline),
-                                border: OutlineInputBorder()),
+                              labelText: 'Confirmar',
+                              prefixIcon: Icon(Icons.lock_outline),
+                              border: OutlineInputBorder(),
+                            ),
                             validator: (v) => v != _passwordController.text
                                 ? 'No coinciden'
                                 : null,
@@ -202,17 +209,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           child: ElevatedButton(
                             onPressed: authState.isLoading ? null : _submit,
                             style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
                             child: authState.isLoading
                                 ? const SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2))
-                                : Text(_isLogin
-                                    ? 'INICIAR SESIÓN'
-                                    : 'REGISTRARSE'),
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    _isLogin ? 'INICIAR SESIÓN' : 'REGISTRARSE',
+                                  ),
                           ),
                         ),
                         TextButton(
@@ -220,29 +229,62 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             _isLogin = !_isLogin;
                             _formKey.currentState?.reset();
                           }),
-                          child: Text(_isLogin
-                              ? '¿No tienes cuenta? Regístrate'
-                              : '¿Ya tienes cuenta? Inicia sesión'),
+                          child: Text(
+                            _isLogin
+                                ? '¿No tienes cuenta? Regístrate'
+                                : '¿Ya tienes cuenta? Inicia sesión',
+                          ),
                         ),
                         Container(
                           margin: const EdgeInsets.only(top: 16),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(8)),
+                            color: Colors.deepPurple.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Credenciales de prueba:',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
+                              Text(
+                                'Credenciales de prueba:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Colors.deepPurple.shade900,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                '👨‍💼 Admin: admin@cremosos.com / 123456',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '👥 Clientes:',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.deepPurple.shade700,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               const Text(
-                                  'Cliente: juan.perez@email.com / password123',
-                                  style: TextStyle(fontSize: 11)),
-                              const Text('Admin: admin@cremosos.com / admin123',
-                                  style: TextStyle(fontSize: 11)),
+                                '• María García: maria.garcia@email.com / 123456',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                '• Carlos López: carlos.lopez@email.com / 123456',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                '• Ana Martínez: ana.martinez@email.com / 123456',
+                                style: TextStyle(fontSize: 10),
+                              ),
                             ],
                           ),
                         ),

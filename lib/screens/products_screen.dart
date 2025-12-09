@@ -2,8 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/products_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/product.dart';
+import '../models/user.dart';
 import 'product_detail_screen.dart';
+import 'admin/products_management_screen.dart';
 
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
@@ -24,11 +27,36 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     final productsState = ref.watch(productsProvider);
+    final authState = ref.watch(authProvider);
+    // SOLO ADMIN puede gestionar productos (no employees)
+    final canManageProducts = authState.user?.role == UserRole.admin;
+
+    // DEBUG: Imprimir info
+    print('🔍 DEBUG Products Screen:');
+    print('  - Usuario: ${authState.user?.name}');
+    print('  - Email: ${authState.user?.email}');
+    print('  - Role: ${authState.user?.role}');
+    print('  - canManageProducts: $canManageProducts');
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Productos'),
         actions: [
+          // Botón de agregar producto para ADMIN
+          if (canManageProducts)
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProductsManagementScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_circle, size: 28),
+              tooltip: 'Agregar Producto',
+              color: Colors.green,
+            ),
           IconButton(
             icon: const Icon(Icons.filter_list_off),
             onPressed: () {
@@ -49,8 +77,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               decoration: InputDecoration(
                 hintText: 'Buscar productos...',
                 prefixIcon: const Icon(Icons.search),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
@@ -107,16 +136,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                const Text('Ordenar:',
-                    style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Ordenar:',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<ProductSortOption>(
                     value: productsState.sortOption,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       isDense: true,
                     ),
                     items: ProductSortOption.values.map((option) {
@@ -130,9 +163,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                         ProductSortOption.popularity => 'Más populares',
                       };
                       return DropdownMenuItem(
-                          value: option,
-                          child: Text(label,
-                              style: const TextStyle(fontSize: 14)));
+                        value: option,
+                        child: Text(
+                          label,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      );
                     }).toList(),
                     onChanged: (value) {
                       if (value != null)
@@ -161,8 +197,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off,
-                            size: 64, color: Colors.grey.shade400),
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
                         const SizedBox(height: 16),
                         const Text('No se encontraron productos'),
                       ],
@@ -172,11 +211,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 5,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
+                          crossAxisCount: 5,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
                     itemCount: productsState.currentPageProducts.length,
                     itemBuilder: (context, index) {
                       final product = productsState.currentPageProducts[index];
@@ -196,20 +235,21 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     icon: const Icon(Icons.chevron_left),
                     onPressed: productsState.currentPage > 1
                         ? () => ref
-                            .read(productsProvider.notifier)
-                            .goToPage(productsState.currentPage - 1)
+                              .read(productsProvider.notifier)
+                              .goToPage(productsState.currentPage - 1)
                         : null,
                   ),
                   Text(
-                      'Página ${productsState.currentPage} de ${productsState.totalPages}'),
+                    'Página ${productsState.currentPage} de ${productsState.totalPages}',
+                  ),
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed:
                         productsState.currentPage < productsState.totalPages
-                            ? () => ref
-                                .read(productsProvider.notifier)
-                                .goToPage(productsState.currentPage + 1)
-                            : null,
+                        ? () => ref
+                              .read(productsProvider.notifier)
+                              .goToPage(productsState.currentPage + 1)
+                        : null,
                   ),
                 ],
               ),
@@ -225,8 +265,11 @@ class _CategoryChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onSelected;
 
-  const _CategoryChip(
-      {required this.label, required this.selected, required this.onSelected});
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -248,6 +291,10 @@ class ProductCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    // SOLO ADMIN puede editar productos
+    final canManageProducts = authState.user?.role == UserRole.admin;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 1,
@@ -258,7 +305,8 @@ class ProductCard extends ConsumerWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => ProductDetailScreen(product: product)),
+                builder: (_) => ProductDetailScreen(product: product),
+              ),
             ),
             child: Stack(
               children: [
@@ -275,7 +323,7 @@ class ProductCard extends ConsumerWidget {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
+                                      loadingProgress.expectedTotalBytes!
                                 : null,
                             strokeWidth: 2,
                           ),
@@ -287,33 +335,132 @@ class ProductCard extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image,
-                              size: 32, color: Colors.grey.shade400),
+                          Icon(
+                            Icons.image,
+                            size: 32,
+                            color: Colors.grey.shade400,
+                          ),
                           const SizedBox(height: 4),
-                          Text('Sin imagen',
-                              style: TextStyle(
-                                  fontSize: 10, color: Colors.grey.shade600)),
+                          Text(
+                            'Sin imagen',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                if (product.onSale == true)
+                // Botones de editar y eliminar para admin
+                if (canManageProducts)
                   Positioned(
                     top: 4,
                     right: 4,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Botón Eliminar
+                        InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('¿Eliminar producto?'),
+                                content: Text(
+                                  '¿Estás seguro de eliminar "${product.name}"?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // TODO: Implementar eliminación
+                                      Navigator.pop(ctx);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Producto "${product.name}" eliminado',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    child: const Text('Eliminar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        // Botón Editar
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ProductsManagementScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (product.onSale == true)
+                  Positioned(
+                    top: 4,
+                    left: 4,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text('OFERTA',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'OFERTA',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -332,7 +479,9 @@ class ProductCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 11),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -340,8 +489,10 @@ class ProductCard extends ConsumerWidget {
                     children: [
                       const Icon(Icons.star, size: 10, color: Colors.amber),
                       const SizedBox(width: 2),
-                      Text('${product.rating}',
-                          style: const TextStyle(fontSize: 9)),
+                      Text(
+                        '${product.rating}',
+                        style: const TextStyle(fontSize: 9),
+                      ),
                     ],
                   ),
                   const Spacer(),
@@ -357,17 +508,19 @@ class ProductCard extends ConsumerWidget {
                     Text(
                       '\$${product.effectivePrice.toStringAsFixed(0)}',
                       style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
                     ),
                   ] else
                     Text(
                       '\$${product.price.toStringAsFixed(0)}',
                       style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
                     ),
                 ],
               ),

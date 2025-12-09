@@ -22,6 +22,8 @@ import 'screens/products_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/auth_screen.dart';
+import 'screens/admin_menu_screen.dart';
+import 'screens/reports_screen.dart';
 
 // Importar providers para state management
 import 'providers/auth_provider.dart';
@@ -159,7 +161,9 @@ class _MainNavigatorState extends State<MainNavigator> {
     const HomeScreen(), // 0: Inicio/Dashboard
     const ProductsScreen(), // 1: Catálogo de productos
     const CartScreen(), // 2: Carrito de compras
-    const ProfileScreen(), // 3: Perfil de usuario
+    const AdminMenuScreen(), // 3: Administración (solo admin/employee)
+    const ReportsScreen(), // 4: Reportes
+    const ProfileScreen(), // 5: Perfil de usuario
   ];
 
   // Configuración de los items de navegación
@@ -168,6 +172,8 @@ class _MainNavigatorState extends State<MainNavigator> {
     {'icon': Icons.home, 'label': 'Inicio'},
     {'icon': Icons.shopping_bag, 'label': 'Productos'},
     {'icon': Icons.shopping_cart, 'label': 'Carrito'},
+    {'icon': Icons.admin_panel_settings, 'label': 'Admin'},
+    {'icon': Icons.analytics, 'label': 'Reportes'},
     {'icon': Icons.person, 'label': 'Perfil'},
   ];
 
@@ -179,13 +185,15 @@ class _MainNavigatorState extends State<MainNavigator> {
         // Obtener cantidad de items en el carrito
         // EXPLICAR: Se muestra como badge en el icono del carrito
         final cartItemCount = ref.watch(cartItemCountProvider);
+        final authState = ref.watch(authProvider);
+        final isAdmin = authState.user?.role.value == 'admin';
 
         return Scaffold(
           // Mostrar la pantalla correspondiente al índice actual
           body: _screens[_currentIndex],
 
           // Barra de navegación inferior
-          // EXPLICAR: Permite cambiar entre las 4 pantallas principales
+          // EXPLICAR: Permite cambiar entre las 6 pantallas principales
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
 
@@ -195,11 +203,20 @@ class _MainNavigatorState extends State<MainNavigator> {
             type: BottomNavigationBarType.fixed,
             selectedItemColor: Colors.deepPurple,
             unselectedItemColor: Colors.grey,
+            selectedFontSize: 11,
+            unselectedFontSize: 10,
 
-            // Generar items de navegación
+            // Generar items de navegación - filtrar Admin y Reportes para clientes
             items: _navItems
                 .asMap()
                 .entries
+                .where((entry) {
+                  // Ocultar Admin (3) y Reportes (4) si no es admin
+                  if (!isAdmin && (entry.key == 3 || entry.key == 4)) {
+                    return false;
+                  }
+                  return true;
+                })
                 .map(
                   (entry) => BottomNavigationBarItem(
                     // Si es el carrito (índice 2) y hay items, mostrar badge
@@ -208,7 +225,7 @@ class _MainNavigatorState extends State<MainNavigator> {
                             label: Text('$cartItemCount'),
                             child: Icon(entry.value['icon'] as IconData),
                           )
-                        : Icon(entry.value['icon'] as IconData),
+                        : Icon(entry.value['icon'] as IconData, size: 22),
                     label: entry.value['label'] as String,
                   ),
                 )
