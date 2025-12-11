@@ -1,30 +1,35 @@
 // providers/auth_provider.dart - Provider de Autenticación
+// EXPLICAR: Este archivo maneja todo el estado de autenticación de la app
+// usando Riverpod para gestión de estado reactiva
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 
-// Provider de ApiService
+// Provider de ApiService - Provee la instancia para hacer peticiones HTTP
 final apiServiceProvider = Provider<ApiService>((ref) {
   return ApiService();
 });
 
-// Provider de AuthService
+// Provider de AuthService - Provee la instancia del servicio de autenticación
+// EXPLICAR: ref.read permite leer otros providers para inyectar dependencias
 final authServiceProvider = Provider<AuthService>((ref) {
   final apiService = ref.read(apiServiceProvider);
   return AuthService(apiService);
 });
 
-// Estado de autenticación
+// Estado de autenticación - Contiene toda la información del usuario logueado
 class AuthState {
-  final User? user;
-  final String? token;
-  final bool isLoading;
-  final String? error;
+  final User? user; // Usuario actual (null si no está autenticado)
+  final String? token; // Token JWT para autenticación en la API
+  final bool isLoading; // Indica si hay una operación de auth en progreso
+  final String? error; // Mensaje de error si algo falla
 
   AuthState({this.user, this.token, this.isLoading = false, this.error});
 
+  // Método para crear una copia modificada del estado
+  // EXPLICAR: En Riverpod, los estados son inmutables, se crean nuevas copias
   AuthState copyWith({
     User? user,
     String? token,
@@ -39,6 +44,7 @@ class AuthState {
     );
   }
 
+  // Getters útiles para verificar estado
   bool get isAuthenticated => user != null && token != null;
   bool get isAdmin => user?.role == UserRole.admin;
 }
@@ -163,6 +169,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       // Ignorar errores
     }
+  }
+
+  // Alias para refreshProfile (usado por profile_screen)
+  Future<void> refreshUser() async {
+    await refreshProfile();
   }
 }
 

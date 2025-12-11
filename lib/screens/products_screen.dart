@@ -1,13 +1,12 @@
-// screens/products_screen.dart
+// Importaciones necesarias
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/products_provider.dart';
+import '../services/api_service.dart';
+import '../services/product_service.dart';
+import '../widgets/app_drawer.dart';
 import '../providers/auth_provider.dart';
-import '../models/product.dart';
-import '../models/user.dart';
-import 'product_detail_screen.dart';
-import 'admin/products_management_screen.dart';
 
+// Pantalla de productos - muestra catálogo de productos disponibles
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
@@ -16,380 +15,336 @@ class ProductsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
-  final _searchController = TextEditingController();
-
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    // Cargar productos al iniciar la pantalla
+    Future.microtask(
+      () => ref.read(productsListProvider.notifier).loadProducts(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final productsState = ref.watch(productsProvider);
-    final authState = ref.watch(authProvider);
-    // SOLO ADMIN puede gestionar productos (no employees)
-    final canManageProducts = authState.user?.role == UserRole.admin;
-
-    // DEBUG: Imprimir info
-    print('🔍 DEBUG Products Screen:');
-    print('  - Usuario: ${authState.user?.name}');
-    print('  - Email: ${authState.user?.email}');
-    print('  - Role: ${authState.user?.role}');
-    print('  - canManageProducts: $canManageProducts');
+    // Obtener lista de productos desde el provider
+    final productsAsync = ref.watch(productsListProvider);
+    final user = ref.watch(authProvider).user;
+    // Verificar si el usuario es administrador para mostrar opciones de edición
+    final isAdmin = user?.role.toString() == 'UserRole.admin';
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Productos'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         actions: [
-          // Botón de agregar producto para ADMIN
-          if (canManageProducts)
+          // Botón de agregar producto solo visible para administradores
+          if (isAdmin)
             IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProductsManagementScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_circle, size: 28),
-              tooltip: 'Agregar Producto',
-              color: Colors.green,
+              icon: const Icon(Icons.add),
+              onPressed: () => _showProductDialog(context),
             ),
-          IconButton(
-            icon: const Icon(Icons.filter_list_off),
-            onPressed: () {
-              ref.read(productsProvider.notifier).clearFilters();
-              _searchController.clear();
+        ],
+      ),
+      body: productsAsync.when(
+        data: (products) {
+          if (products.isEmpty) {
+            return const Center(child: Text('No hay productos disponibles'));
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(productsListProvider);
             },
-            tooltip: 'Limpiar filtros',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Buscar productos...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref.read(productsProvider.notifier).search('');
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (value) =>
-                  ref.read(productsProvider.notifier).search(value),
-            ),
-          ),
-
-          // Category Filters
-          SizedBox(
-            height: 50,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _CategoryChip(
-                  label: 'Todos',
-                  selected: productsState.selectedCategory == null,
-                  onSelected: () => ref
-                      .read(productsProvider.notifier)
-                      .filterByCategory(null),
-                ),
-                ...ProductCategory.values.map((category) {
-                  final label = switch (category) {
-                    ProductCategory.arrozConLeche => 'Arroz',
-                    ProductCategory.fresasConCrema => 'Fresas',
-                    ProductCategory.postresEspeciales => 'Postres Esp.',
-                    ProductCategory.bebidasCremosas => 'Bebidas Crem.',
-                    ProductCategory.toppings => 'Toppings',
-                    ProductCategory.bebidas => 'Bebidas',
-                    ProductCategory.postres => 'Postres',
-                  };
-                  return _CategoryChip(
-                    label: label,
-                    selected: productsState.selectedCategory == category,
-                    onSelected: () => ref
-                        .read(productsProvider.notifier)
-                        .filterByCategory(category),
-                  );
-                }),
-              ],
-            ),
-          ),
-
-          // Sort Dropdown
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                const Text(
-                  'Ordenar:',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<ProductSortOption>(
-                    value: productsState.sortOption,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      isDense: true,
-                    ),
-                    items: ProductSortOption.values.map((option) {
-                      final label = switch (option) {
-                        ProductSortOption.nameAsc => 'Nombre A-Z',
-                        ProductSortOption.nameDesc => 'Nombre Z-A',
-                        ProductSortOption.priceAsc => 'Precio: Menor',
-                        ProductSortOption.priceDesc => 'Precio: Mayor',
-                        ProductSortOption.ratingDesc => 'Mejor valorados',
-                        ProductSortOption.newest => 'Más nuevos',
-                        ProductSortOption.popularity => 'Más populares',
-                      };
-                      return DropdownMenuItem(
-                        value: option,
-                        child: Text(
-                          label,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null)
-                        ref.read(productsProvider.notifier).sortBy(value);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Results Count
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              '${productsState.filteredProducts.length} productos encontrados',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Products Grid
-          Expanded(
-            child: productsState.currentPageProducts.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text('No se encontraron productos'),
-                      ],
-                    ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 5,
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                        ),
-                    itemCount: productsState.currentPageProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = productsState.currentPageProducts[index];
-                      return ProductCard(product: product);
-                    },
-                  ),
-          ),
-
-          // Pagination
-          if (productsState.totalPages > 1)
-            Container(
+            child: GridView.builder(
               padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: productsState.currentPage > 1
-                        ? () => ref
-                              .read(productsProvider.notifier)
-                              .goToPage(productsState.currentPage - 1)
-                        : null,
-                  ),
-                  Text(
-                    'Página ${productsState.currentPage} de ${productsState.totalPages}',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed:
-                        productsState.currentPage < productsState.totalPages
-                        ? () => ref
-                              .read(productsProvider.notifier)
-                              .goToPage(productsState.currentPage + 1)
-                        : null,
-                  ),
-                ],
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
               ),
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return _ProductCard(product: product, isAdmin: isAdmin);
+              },
             ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(productsListProvider),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showProductDialog(BuildContext context, [dynamic product]) {
+    final nameController = TextEditingController(text: product?['name'] ?? '');
+    final priceController = TextEditingController(
+      text: product?['price']?.toString() ?? '',
+    );
+    final descController = TextEditingController(
+      text: product?['description'] ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(product == null ? 'Crear Producto' : 'Editar Producto'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Nombre'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: priceController,
+                decoration: const InputDecoration(labelText: 'Precio'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descController,
+                decoration: const InputDecoration(labelText: 'Descripción'),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final price = double.tryParse(priceController.text);
+              final desc = descController.text.trim();
+
+              if (name.isEmpty || price == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Completa todos los campos')),
+                );
+                return;
+              }
+
+              try {
+                final apiService = ApiService();
+                final productService = ProductService(apiService);
+
+                if (product == null) {
+                  // Crear
+                  await productService.createProduct(
+                    name: name,
+                    description: desc,
+                    price: price,
+                    category: 'otros',
+                  );
+                } else {
+                  // Editar
+                  await productService.updateProduct(
+                    productId: product['id'].toString(),
+                    name: name,
+                    price: price,
+                    description: desc,
+                  );
+                }
+
+                if (ctx.mounted) Navigator.pop(ctx);
+                ref.invalidate(productsListProvider);
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        product == null
+                            ? 'Producto creado exitosamente'
+                            : 'Producto actualizado',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(product == null ? 'Crear' : 'Guardar'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onSelected;
+class _ProductCard extends ConsumerWidget {
+  final dynamic product;
+  final bool isAdmin;
 
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onSelected(),
-      ),
-    );
-  }
-}
-
-class ProductCard extends ConsumerWidget {
-  final Product product;
-
-  const ProductCard({super.key, required this.product});
+  const _ProductCard({required this.product, required this.isAdmin});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    // SOLO ADMIN puede editar productos
-    final canManageProducts = authState.user?.role == UserRole.admin;
-
     return Card(
       clipBehavior: Clip.antiAlias,
-      elevation: 1,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProductDetailScreen(product: product),
+          Expanded(
+            flex: 3,
+            child: Image.network(
+              product['imageUrl'] ??
+                  'https://via.placeholder.com/150?text=Sin+Imagen',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: Colors.grey[300],
+                child: const Icon(Icons.image, size: 48),
               ),
             ),
-            child: Stack(
-              children: [
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: Image.network(
-                    product.image,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: Colors.grey.shade100,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                : null,
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => Container(
-                      color: Colors.grey.shade200,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.image,
-                            size: 32,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Sin imagen',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
+          ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product['name'] ?? 'Sin nombre',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  Text(
+                    '\$${(product['price'] ?? 0).toStringAsFixed(0)} COP',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final apiService = ApiService();
+                          await apiService.post(
+                            '/cart/items',
+                            data: {'productId': product['id'], 'quantity': 1},
+                          );
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${product['name']} agregado al carrito',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.shopping_cart, size: 16),
+                      label: const Text(
+                        'Agregar',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
                       ),
                     ),
                   ),
-                ),
-                // Botones de editar y eliminar para admin
-                if (canManageProducts)
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  if (isAdmin) ...[
+                    const SizedBox(height: 4),
+                    Row(
                       children: [
-                        // Botón Eliminar
-                        InkWell(
-                          onTap: () {
-                            showDialog(
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              // Encontrar el padre _ProductsScreenState
+                              final parentState = context
+                                  .findAncestorStateOfType<
+                                    _ProductsScreenState
+                                  >();
+                              if (parentState != null) {
+                                parentState._showProductDialog(
+                                  context,
+                                  product,
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.edit, size: 16),
+                            label: const Text(
+                              'Editar',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (ctx) => AlertDialog(
-                                title: const Text('¿Eliminar producto?'),
+                                title: const Text('Eliminar'),
                                 content: Text(
-                                  '¿Estás seguro de eliminar "${product.name}"?',
+                                  '¿Eliminar "${product['name']}"?',
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
+                                    onPressed: () => Navigator.pop(ctx, false),
                                     child: const Text('Cancelar'),
                                   ),
                                   ElevatedButton(
-                                    onPressed: () {
-                                      // TODO: Implementar eliminación
-                                      Navigator.pop(ctx);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Producto "${product.name}" eliminado',
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: () => Navigator.pop(ctx, true),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red,
                                     ),
@@ -398,130 +353,50 @@ class ProductCard extends ConsumerWidget {
                                 ],
                               ),
                             );
+
+                            if (confirmed == true) {
+                              try {
+                                final apiService = ApiService();
+                                final productService = ProductService(
+                                  apiService,
+                                );
+                                await productService.deleteProduct(
+                                  product['id'].toString(),
+                                );
+
+                                ref.invalidate(productsListProvider);
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Producto eliminado'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
                           },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
-                              size: 16,
-                            ),
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 20,
+                            color: Colors.red,
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        // Botón Editar
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const ProductsManagementScreen(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
                       ],
                     ),
-                  ),
-                if (product.onSale == true)
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'OFERTA',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      product.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 10, color: Colors.amber),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${product.rating}',
-                        style: const TextStyle(fontSize: 9),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  if (product.salePrice != null) ...[
-                    Text(
-                      '\$${product.price.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: 8,
-                        decoration: TextDecoration.lineThrough,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    Text(
-                      '\$${product.effectivePrice.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
-                  ] else
-                    Text(
-                      '\$${product.price.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
+                  ],
                 ],
               ),
             ),
@@ -529,5 +404,30 @@ class ProductCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+// Provider simple para lista de productos
+final productsListProvider =
+    StateNotifierProvider<ProductsListNotifier, AsyncValue<List<dynamic>>>(
+      (ref) => ProductsListNotifier(),
+    );
+
+class ProductsListNotifier extends StateNotifier<AsyncValue<List<dynamic>>> {
+  ProductsListNotifier() : super(const AsyncValue.loading()) {
+    loadProducts();
+  }
+
+  Future<void> loadProducts() async {
+    state = const AsyncValue.loading();
+    try {
+      final apiService = ApiService();
+      final productService = ProductService(apiService);
+      // Solicitar todos los productos (limit=200 para asegurar que se obtengan todos)
+      final data = await productService.getAllProducts(limit: 200);
+      state = AsyncValue.data(data);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
   }
 }

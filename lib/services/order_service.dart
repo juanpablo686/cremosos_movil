@@ -226,4 +226,48 @@ class OrderService {
       rethrow;
     }
   }
+
+  /// GET ORDERS - GET /api/orders (alias para getOrderHistory)
+  /// Obtener todas las órdenes con filtros opcionales
+  Future<Map<String, dynamic>> getOrders({
+    String? status,
+    String? startDate,
+    String? endDate,
+    String? customerId,
+    String? search,
+    int? page,
+    int? limit,
+  }) async {
+    return getOrderHistory(
+      status: status,
+      startDate: startDate,
+      endDate: endDate,
+      customerId: customerId,
+      search: search,
+      page: page,
+      limit: limit,
+    );
+  }
+
+  /// UPDATE ORDER STATUS - PUT /api/orders/{orderId}
+  /// Actualizar el estado de una orden (solo admin/employee)
+  Future<Map<String, dynamic>> updateOrderStatus(
+    String orderId,
+    String newStatus,
+  ) async {
+    try {
+      final response = await _apiService.put(
+        '${ApiConfig.ordersEndpoint}/$orderId',
+        data: {'status': newStatus},
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Error al actualizar estado de orden');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

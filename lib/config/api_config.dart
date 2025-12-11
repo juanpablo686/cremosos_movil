@@ -30,7 +30,7 @@ class ApiConfig {
 
   // Endpoints de Órdenes (2 endpoints requeridos)
   static const String ordersEndpoint = '/orders';
-  static const String orderHistoryEndpoint = '/orders/history';
+  static const String orderHistoryEndpoint = '/orders';
 
   // Endpoints de Reportes (2 endpoints requeridos)
   static const String dashboardEndpoint = '/reports/dashboard';

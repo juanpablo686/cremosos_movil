@@ -252,8 +252,112 @@ function generateProducts() {
 
 let products = generateProducts();
 
+// Reordenar productos para que fresas_con_crema y arroz_con_leche aparezcan primero
+products.sort((a, b) => {
+  const priorityOrder = {
+    'fresas_con_crema': 1,
+    'arroz_con_leche': 2,
+    'postres_especiales': 3,
+    'bebidas_cremosas': 4,
+    'postres': 5,
+    'toppings': 6,
+    'bebidas': 7
+  };
+  
+  const priorityA = priorityOrder[a.category] || 999;
+  const priorityB = priorityOrder[b.category] || 999;
+  
+  if (priorityA !== priorityB) {
+    return priorityA - priorityB;
+  }
+  
+  return a.name.localeCompare(b.name);
+});
+
 let carts = {};
-let orders = [];
+
+// PEDIDOS INICIALES
+let orders = [
+  {
+    id: 'order1',
+    orderNumber: 'ORD-2024-0001',
+    userId: 'user1',
+    userName: 'Juan Admin',
+    userEmail: 'admin@cremosos.com',
+    items: [
+      {
+        id: 'item1',
+        productId: 'prod1',
+        productName: 'Arroz con Leche Tradicional',
+        productPrice: 18000,
+        productImage: 'https://images.unsplash.com/photo-1562440499-64c9a111f713?w=400',
+        quantity: 3,
+        subtotal: 54000
+      },
+      {
+        id: 'item2',
+        productId: 'prod2',
+        productName: 'Fresas con Crema Premium',
+        productPrice: 22000,
+        productImage: 'https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=400',
+        quantity: 2,
+        subtotal: 44000
+      }
+    ],
+    subtotal: 98000,
+    tax: 7840,
+    shippingCost: 5000,
+    total: 110840,
+    status: 'pending',
+    paymentMethod: 'credit_card',
+    paymentStatus: 'paid',
+    shippingAddress: {
+      street: 'Calle 123 #45-67',
+      city: 'Cali',
+      state: 'Valle del Cauca',
+      zipCode: '760001',
+      country: 'Colombia'
+    },
+    notes: 'Entregar en horas de la mañana',
+    createdAt: new Date(Date.now() - 86400000).toISOString(), // Ayer
+    updatedAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'order2',
+    orderNumber: 'ORD-2024-0002',
+    userId: 'user2',
+    userName: 'María Cliente',
+    userEmail: 'cliente@cremosos.com',
+    items: [
+      {
+        id: 'item3',
+        productId: 'prod3',
+        productName: 'Postre Especial Chocolate',
+        productPrice: 25000,
+        productImage: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400',
+        quantity: 1,
+        subtotal: 25000
+      }
+    ],
+    subtotal: 25000,
+    tax: 2000,
+    shippingCost: 5000,
+    total: 32000,
+    status: 'processing',
+    paymentMethod: 'debit_card',
+    paymentStatus: 'paid',
+    shippingAddress: {
+      street: 'Carrera 50 #30-20',
+      city: 'Cali',
+      state: 'Valle del Cauca',
+      zipCode: '760002',
+      country: 'Colombia'
+    },
+    notes: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
 
 // Datos para roles
 let roles = [
@@ -328,16 +432,69 @@ let sales = [
     saleNumber: 'VEN-2024-0001',
     employeeId: 'user1',
     employeeName: 'Juan Admin',
+    customerId: 'user2',
+    customerName: 'María Cliente',
     items: [
-      { productId: 'prod1', productName: 'Arroz con Leche Clásico', quantity: 2, unitPrice: 8000, total: 16000 }
+      {
+        productId: 'prod1',
+        productName: 'Arroz con Leche Tradicional',
+        quantity: 2,
+        unitPrice: 18000,
+        discount: 0,
+        total: 36000,
+        imageUrl: 'https://images.unsplash.com/photo-1562440499-64c9a111f713?w=400'
+      },
+      {
+        productId: 'prod4',
+        productName: 'Bebida Cremosa Vainilla',
+        quantity: 1,
+        unitPrice: 12000,
+        discount: 0,
+        total: 12000,
+        imageUrl: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400'
+      }
     ],
-    subtotal: 16000,
-    tax: 1280,
+    subtotal: 48000,
+    tax: 3840,
     discount: 0,
-    total: 17280,
+    total: 51840,
     paymentMethod: 'cash',
+    amountPaid: 60000,
+    change: 8160,
     status: 'completed',
-    createdAt: new Date().toISOString()
+    notes: '',
+    createdAt: new Date(Date.now() - 3600000).toISOString(), // Hace 1 hora
+    completedAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    id: 'sale2',
+    saleNumber: 'VEN-2024-0002',
+    employeeId: 'user1',
+    employeeName: 'Juan Admin',
+    customerId: null,
+    customerName: 'Cliente Genérico',
+    items: [
+      {
+        productId: 'prod2',
+        productName: 'Fresas con Crema Premium',
+        quantity: 3,
+        unitPrice: 22000,
+        discount: 2000,
+        total: 64000,
+        imageUrl: 'https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=400'
+      }
+    ],
+    subtotal: 66000,
+    tax: 5280,
+    discount: 2000,
+    total: 69280,
+    paymentMethod: 'credit_card',
+    amountPaid: 69280,
+    change: 0,
+    status: 'completed',
+    notes: 'Cliente frecuente - 10% descuento',
+    createdAt: new Date().toISOString(),
+    completedAt: new Date().toISOString()
   }
 ];
 
@@ -1665,6 +1822,27 @@ app.post('/api/orders', authenticateToken, (req, res) => {
 
   const { shippingAddress, paymentMethod, paymentDetails, notes } = req.body;
 
+  // Validar stock y reducirlo
+  for (const item of cart.items) {
+    const product = products.find(p => p.id === item.productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: `Producto ${item.productId} no encontrado`
+      });
+    }
+    
+    if (product.stock < item.quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Stock insuficiente para ${product.name}. Disponible: ${product.stock}`
+      });
+    }
+    
+    // Reducir stock
+    product.stock -= item.quantity;
+  }
+
   const subtotal = cart.items.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
   const tax = subtotal * 0.08;
   const shippingCost = subtotal >= 50000 ? 0 : 5000;
@@ -1674,6 +1852,8 @@ app.post('/api/orders', authenticateToken, (req, res) => {
     id: `order${orders.length + 1}`,
     orderNumber: `ORD-2024-${String(orders.length + 1).padStart(4, '0')}`,
     userId: req.user.id,
+    userName: req.user.name,
+    userEmail: req.user.email,
     status: 'pending',
     items: cart.items,
     shippingAddress,
@@ -1810,6 +1990,43 @@ app.put('/api/orders/:id/cancel', authenticateToken, (req, res) => {
   });
 });
 
+// Nuevo: PUT /api/orders/:id - Actualizar estado de orden (ADMIN)
+app.put('/api/orders/:id', authenticateToken, (req, res) => {
+  const orderIndex = orders.findIndex(o => o.id === req.params.id);
+
+  if (orderIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: 'Orden no encontrada'
+    });
+  }
+
+  const { status, notes } = req.body;
+
+  if (status) {
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estado inválido'
+      });
+    }
+    orders[orderIndex].status = status;
+  }
+
+  if (notes !== undefined) {
+    orders[orderIndex].notes = notes;
+  }
+
+  orders[orderIndex].updatedAt = new Date().toISOString();
+
+  res.json({
+    success: true,
+    message: 'Orden actualizada',
+    data: orders[orderIndex]
+  });
+});
+
 // 18. GET /api/orders/:id/track
 app.get('/api/orders/:id/track', authenticateToken, (req, res) => {
   const order = orders.find(o => o.id === req.params.id && o.userId === req.user.id);
@@ -1828,6 +2045,89 @@ app.get('/api/orders/:id/track', authenticateToken, (req, res) => {
 });
 
 // ========================================
+// ENDPOINTS DE VENTAS POS (2)
+// ========================================
+
+// POST /api/sales - Procesar venta desde POS
+app.post('/api/sales', authenticateToken, (req, res) => {
+  const { items, paymentMethod = 'cash', customerName } = req.body;
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No hay productos en la venta'
+    });
+  }
+
+  // Validar stock y calcular total
+  let subtotal = 0;
+  const saleItems = [];
+
+  for (const item of items) {
+    const product = products.find(p => p.id === item.id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: `Producto ${item.id} no encontrado`
+      });
+    }
+
+    if (product.stock < item.quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Stock insuficiente para ${product.name}. Disponible: ${product.stock}`
+      });
+    }
+
+    // Reducir stock
+    product.stock -= item.quantity;
+
+    const itemTotal = product.price * item.quantity;
+    subtotal += itemTotal;
+
+    saleItems.push({
+      productId: product.id,
+      productName: product.name,
+      productPrice: product.price,
+      quantity: item.quantity,
+      total: itemTotal
+    });
+  }
+
+  const tax = subtotal * 0.08;
+  const total = subtotal + tax;
+
+  // Crear venta
+  const newSale = {
+    id: `sale${Date.now()}`,
+    saleNumber: `SALE-${String(Date.now()).slice(-8)}`,
+    employeeId: req.user.id,
+    employeeName: req.user.name,
+    customerName: customerName || 'Cliente General',
+    items: saleItems,
+    subtotal,
+    tax,
+    total,
+    paymentMethod,
+    status: 'completed',
+    createdAt: new Date().toISOString()
+  };
+
+  // Guardar venta (agregamos array si no existe)
+  if (!global.sales) {
+    global.sales = [];
+  }
+  global.sales.push(newSale);
+
+  res.status(201).json({
+    success: true,
+    message: 'Venta procesada exitosamente',
+    data: newSale
+  });
+});
+
+// ========================================
 // ENDPOINTS DE REPORTES (4)
 // ========================================
 
@@ -1835,6 +2135,45 @@ app.get('/api/orders/:id/track', authenticateToken, (req, res) => {
 app.get('/api/reports/dashboard', authenticateToken, (req, res) => {
   const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
   const totalOrders = orders.length;
+
+  // Calcular ventas por categoría basado en productos vendidos
+  const categorySales = {};
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (product) {
+        if (!categorySales[product.category]) {
+          categorySales[product.category] = 0;
+        }
+        categorySales[product.category] += item.quantity * item.price;
+      }
+    });
+  });
+
+  // Convertir a array para el frontend
+  const salesByCategory = Object.entries(categorySales).map(([category, sales]) => ({
+    category,
+    sales,
+    percentage: totalSales > 0 ? ((sales / totalSales) * 100).toFixed(1) : 0
+  }));
+
+  // Ventas diarias de la última semana
+  const today = new Date();
+  const dailySales = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const dayOrders = orders.filter(o => o.createdAt?.startsWith(dateStr));
+    const dayTotal = dayOrders.reduce((sum, o) => sum + o.total, 0);
+    
+    dailySales.push({
+      date: dateStr,
+      sales: dayTotal,
+      orders: dayOrders.length
+    });
+  }
 
   res.json({
     success: true,
@@ -1849,9 +2188,9 @@ app.get('/api/reports/dashboard', authenticateToken, (req, res) => {
         customersChange: 12.1,
         aovChange: 5.2
       },
-      dailySales: [],
+      dailySales,
       topProducts: products.slice(0, 5),
-      salesByCategory: [],
+      salesByCategory,
       recentOrders: orders.slice(-5)
     }
   });
@@ -2022,4 +2361,7 @@ app.listen(PORT, () => {
    📥 Compras y Proveedores
    📊 Reportes y Análisis
   `);
+  
+  // Servidor corriendo y esperando peticiones
+  console.log('\n✅ Servidor escuchando en puerto ' + PORT + '...\n');
 });

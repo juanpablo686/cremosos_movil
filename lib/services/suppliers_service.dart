@@ -116,7 +116,10 @@ class SuppliersService {
       if (isActive != null) data['isActive'] = isActive;
       if (rating != null) data['rating'] = rating;
 
-      final response = await _apiService.put('/suppliers/$supplierId', data: data);
+      final response = await _apiService.put(
+        '/suppliers/$supplierId',
+        data: data,
+      );
 
       if (response.data['success'] == true) {
         return Supplier.fromJson(response.data['data']);

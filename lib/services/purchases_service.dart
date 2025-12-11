@@ -98,7 +98,10 @@ class PurchasesService {
       if (notes != null) data['notes'] = notes;
       if (receivedAt != null) data['receivedAt'] = receivedAt;
 
-      final response = await _apiService.put('/purchases/$purchaseId', data: data);
+      final response = await _apiService.put(
+        '/purchases/$purchaseId',
+        data: data,
+      );
 
       if (response.data['success'] == true) {
         return Purchase.fromJson(response.data['data']);

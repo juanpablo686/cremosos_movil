@@ -57,7 +57,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         });
       }
 
-      // No hacer Navigator.pop - dejar que el estado maneje la navegación automáticamente
+      // Redirigir automáticamente al HomeScreen después del login/registro
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -65,9 +65,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               _isLogin ? '¡Bienvenido!' : '¡Cuenta creada exitosamente!',
             ),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 1),
           ),
         );
+
+        // Navegar al home screen automáticamente
+        Navigator.of(context).pushReplacementNamed('/');
       }
     } catch (e) {
       if (mounted) {

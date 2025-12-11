@@ -1,9 +1,11 @@
+// Importaciones necesarias para realizar peticiones HTTP
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
 
 /// Servicio base para todas las peticiones HTTP a la API
+/// Maneja autenticación automática, logging y manejo de errores
 /// EXPLICAR EN EXPOSICIÓN: Dio es una librería HTTP potente que permite:
 /// - Interceptores (agregar token automáticamente)
 /// - Manejo de errores centralizado

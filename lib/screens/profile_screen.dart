@@ -1,12 +1,8 @@
-// screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../widgets/app_drawer.dart';
+import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
-import '../services/order_service.dart';
-import '../data/users_data.dart' show getUserOrders;
-import '../models/cart.dart';
-import 'auth_screen.dart';
-import 'reports_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -16,1024 +12,413 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  List<Order>? _userOrders;
-  bool _isLoadingOrders = false;
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool isLoading = true;
+  bool isSaving = false;
+  bool isEditingPassword = false;
+  String? errorMessage;
+  Map<String, dynamic>? userProfile;
 
   @override
   void initState() {
     super.initState();
-    _loadOrders();
+    _loadProfile();
   }
 
-  Future<void> _loadOrders() async {
-    setState(() => _isLoadingOrders = true);
-    try {
-      final apiService = ref.read(apiServiceProvider);
-      final orderService = OrderService(apiService);
-      final response = await orderService.getOrderHistory();
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
-      if (response['orders'] != null) {
-        setState(() {
-          _userOrders = (response['orders'] as List)
-              .map((json) => Order.fromJson(json))
-              .toList();
-          _isLoadingOrders = false;
-        });
+  Future<void> _loadProfile() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final apiService = ApiService();
+      final response = await apiService.get('/users/profile');
+
+      final data = response.data is Map
+          ? (response.data['data'] ?? response.data)
+          : response.data;
+
+      setState(() {
+        userProfile = data;
+        _nameController.text = userProfile?['name'] ?? '';
+        _emailController.text = userProfile?['email'] ?? '';
+        _phoneController.text = userProfile?['phone'] ?? '';
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al cargar perfil: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => isSaving = true);
+
+    try {
+      final apiService = ApiService();
+
+      // Actualizar información básica
+      await apiService.put(
+        '/users/profile',
+        data: {
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'phone': _phoneController.text,
+        },
+      );
+
+      // Si está cambiando contraseña
+      if (isEditingPassword && _newPasswordController.text.isNotEmpty) {
+        await apiService.put(
+          '/users/password',
+          data: {
+            'currentPassword': _currentPasswordController.text,
+            'newPassword': _newPasswordController.text,
+          },
+        );
+
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        setState(() => isEditingPassword = false);
+      }
+
+      // Actualizar el provider de auth
+      await ref.read(authProvider.notifier).refreshUser();
+
+      // Actualizar la UI inmediatamente
+      setState(() {
+        userProfile = {
+          ...?userProfile,
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'phone': _phoneController.text,
+        };
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Perfil actualizado exitosamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      print('Error cargando órdenes desde backend: $e');
-      print('Usando datos mock como fallback...');
-      // Usar datos mock como fallback
-      final currentUser = ref.read(currentUserProvider);
-      if (currentUser != null) {
-        setState(() {
-          _userOrders = getUserOrders(currentUser.id);
-          _isLoadingOrders = false;
-        });
-      } else {
-        setState(() {
-          _userOrders = [];
-          _isLoadingOrders = false;
-        });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } finally {
+      setState(() => isSaving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isAuthenticated = ref.watch(isAuthenticatedProvider);
-    final currentUser = ref.watch(currentUserProvider);
-    final isAdmin = ref.watch(isAdminProvider);
-
-    if (!isAuthenticated || currentUser == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Perfil')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.person_outline, size: 80, color: Colors.grey.shade400),
-              const SizedBox(height: 16),
-              const Text(
-                'No has iniciado sesión',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AuthScreen()),
-                ),
-                icon: const Icon(Icons.login),
-                label: const Text('Iniciar sesión'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final userOrders = _userOrders ?? [];
+    final user = ref.watch(authProvider).user;
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Mi Perfil'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Cerrar sesión'),
-                  content: const Text('¿Estás seguro?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        ref.read(authProvider.notifier).logout();
-                        Navigator.pop(ctx);
-                      },
-                      child: const Text(
-                        'Cerrar sesión',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadProfile),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // User Info Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.deepPurple, Colors.deepPurple.shade700],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(errorMessage!),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadProfile,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
               ),
-              child: SafeArea(
-                bottom: false,
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: currentUser.avatar != null
-                          ? ClipOval(
-                              child: Image.network(
-                                currentUser.avatar!,
-                                fit: BoxFit.cover,
-                                width: 100,
-                                height: 100,
-                              ),
-                            )
-                          : Text(
-                              currentUser.name[0].toUpperCase(),
+                    // Avatar y rol
+                    Center(
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.deepPurple,
+                            child: Text(
+                              user?.name != null && user!.name.isNotEmpty
+                                  ? user.name.substring(0, 1).toUpperCase()
+                                  : 'U',
                               style: const TextStyle(
-                                fontSize: 40,
-                                color: Colors.deepPurple,
+                                fontSize: 48,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getRoleColor(user?.role.toString()),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _getRoleName(user?.role.toString()),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Información personal
+                    const Text(
+                      'Información Personal',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      currentUser.name,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingrese su nombre';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Correo Electrónico',
+                        prefixIcon: Icon(Icons.email),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingrese su correo';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Correo inválido';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Teléfono',
+                        prefixIcon: Icon(Icons.phone),
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      currentUser.email,
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    if (currentUser.phone != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        currentUser.phone!,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ],
-                    if (isAdmin) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Text(
-                          'ADMINISTRADOR',
+                    const SizedBox(height: 32),
+
+                    // Sección de contraseña
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Contraseña',
                           style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
                           ),
                         ),
+                        TextButton.icon(
+                          icon: Icon(
+                            isEditingPassword ? Icons.close : Icons.edit,
+                          ),
+                          label: Text(
+                            isEditingPassword ? 'Cancelar' : 'Cambiar',
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isEditingPassword = !isEditingPassword;
+                              if (!isEditingPassword) {
+                                _currentPasswordController.clear();
+                                _newPasswordController.clear();
+                                _confirmPasswordController.clear();
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+
+                    if (isEditingPassword) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _currentPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Contraseña Actual',
+                          prefixIcon: Icon(Icons.lock),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (isEditingPassword &&
+                              (value == null || value.isEmpty)) {
+                            return 'Ingrese su contraseña actual';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _newPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Nueva Contraseña',
+                          prefixIcon: Icon(Icons.lock_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (isEditingPassword &&
+                              (value == null || value.isEmpty)) {
+                            return 'Ingrese la nueva contraseña';
+                          }
+                          if (isEditingPassword && value!.length < 6) {
+                            return 'Mínimo 6 caracteres';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirmar Nueva Contraseña',
+                          prefixIcon: Icon(Icons.lock_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (isEditingPassword &&
+                              value != _newPasswordController.text) {
+                            return 'Las contraseñas no coinciden';
+                          }
+                          return null;
+                        },
                       ),
                     ],
+
+                    const SizedBox(height: 32),
+
+                    // Botón de guardar
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: isSaving ? null : _saveProfile,
+                        icon: isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.save),
+                        label: Text(
+                          isSaving ? 'Guardando...' : 'Guardar Cambios',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-
-            // Admin Dashboard Button
-            if (isAdmin)
-              ListTile(
-                leading: const Icon(Icons.dashboard, color: Colors.deepPurple),
-                title: const Text(
-                  'Panel de Administración',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ReportsScreen()),
-                ),
-              ),
-
-            const Divider(),
-
-            // Account Section
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mi cuenta',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Statistics Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.shopping_bag_outlined,
-                          value: '${userOrders.length}',
-                          label: 'Pedidos',
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.local_shipping_outlined,
-                          value:
-                              '${userOrders.where((o) => o.status == OrderStatus.delivered).length}',
-                          label: 'Entregados',
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.schedule_outlined,
-                          value:
-                              '${userOrders.where((o) => o.status == OrderStatus.processing || o.status == OrderStatus.shipped).length}',
-                          label: 'En proceso',
-                          color: Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.monetization_on_outlined,
-                          value:
-                              '\$${userOrders.where((o) => o.status == OrderStatus.delivered).fold<int>(0, (sum, o) => sum + o.total)}',
-                          label: 'Total gastado',
-                          color: Colors.purple,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Quick Actions
-                  Text(
-                    'Acciones rápidas',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _ActionCard(
-                    icon: Icons.edit_outlined,
-                    title: 'Editar perfil',
-                    subtitle: 'Actualiza tu información personal',
-                    color: Colors.blue,
-                    onTap: () => _showEditProfileDialog(context, currentUser),
-                  ),
-                  _ActionCard(
-                    icon: Icons.location_on_outlined,
-                    title: 'Mis direcciones',
-                    subtitle:
-                        '${currentUser.addresses.length} direcciones guardadas',
-                    color: Colors.green,
-                    onTap: () => _showAddressesDialog(context, currentUser),
-                  ),
-                  _ActionCard(
-                    icon: Icons.payment_outlined,
-                    title: 'Métodos de pago',
-                    subtitle:
-                        '${currentUser.paymentMethods.length} métodos guardados',
-                    color: Colors.orange,
-                    onTap: () =>
-                        _showPaymentMethodsDialog(context, currentUser),
-                  ),
-                  _ActionCard(
-                    icon: Icons.favorite_border,
-                    title: 'Favoritos',
-                    subtitle: 'Productos que te gustan',
-                    color: Colors.red,
-                    onTap: () => _showFavoritesDialog(context),
-                  ),
-                  _ActionCard(
-                    icon: Icons.notifications_outlined,
-                    title: 'Notificaciones',
-                    subtitle: 'Configura tus preferencias',
-                    color: Colors.purple,
-                    onTap: () => _showNotificationsDialog(context),
-                  ),
-                  _ActionCard(
-                    icon: Icons.lock_outline,
-                    title: 'Seguridad',
-                    subtitle: 'Cambiar contraseña',
-                    color: Colors.deepOrange,
-                    onTap: () => _showChangePasswordDialog(context),
-                  ),
-                  _ActionCard(
-                    icon: Icons.help_outline,
-                    title: 'Ayuda y soporte',
-                    subtitle: '¿Necesitas ayuda?',
-                    color: Colors.teal,
-                    onTap: () => _showHelpDialog(context),
-                  ),
-
-                  const SizedBox(height: 24),
-                  Text(
-                    'Historial de pedidos',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_isLoadingOrders)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (userOrders.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(
-                          'No tienes pedidos aún',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    )
-                  else
-                    ...userOrders.map((order) {
-                      final statusColor = switch (order.status) {
-                        OrderStatus.pending => Colors.orange,
-                        OrderStatus.processing => Colors.blue,
-                        OrderStatus.shipped => Colors.purple,
-                        OrderStatus.delivered => Colors.green,
-                        OrderStatus.cancelled => Colors.red,
-                      };
-
-                      final statusText = switch (order.status) {
-                        OrderStatus.pending => 'Pendiente',
-                        OrderStatus.processing => 'Procesando',
-                        OrderStatus.shipped => 'Enviado',
-                        OrderStatus.delivered => 'Entregado',
-                        OrderStatus.cancelled => 'Cancelado',
-                      };
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Pedido #${order.id}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: statusColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: statusColor),
-                                    ),
-                                    child: Text(
-                                      statusText,
-                                      style: TextStyle(
-                                        color: statusColor,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${order.items.length} productos',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '\$${order.total.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.deepPurple,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Fecha: ${order.createdAt.day}/${order.createdAt.month}/${order.createdAt.year}',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  void _showEditProfileDialog(BuildContext context, currentUser) {
-    final nameController = TextEditingController(text: currentUser.name);
-    final phoneController = TextEditingController(
-      text: currentUser.phone ?? '',
-    );
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Editar perfil'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre',
-                  prefixIcon: Icon(Icons.person),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Teléfono',
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Perfil actualizado correctamente'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
+  Color _getRoleColor(String? role) {
+    switch (role) {
+      case 'UserRole.admin':
+        return Colors.red;
+      case 'UserRole.employee':
+        return Colors.blue;
+      default:
+        return Colors.green;
+    }
   }
 
-  void _showAddressesDialog(BuildContext context, currentUser) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Mis direcciones'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: currentUser.addresses.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('No tienes direcciones guardadas'),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: currentUser.addresses.length,
-                  itemBuilder: (context, index) {
-                    final address = currentUser.addresses[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: Icon(
-                          address.isDefault ? Icons.home : Icons.location_on,
-                          color: Colors.deepPurple,
-                        ),
-                        title: Text(address.street),
-                        subtitle: Text(
-                          '${address.city}, ${address.state} ${address.postalCode}',
-                        ),
-                        trailing: address.isDefault
-                            ? Chip(
-                                label: const Text(
-                                  'Principal',
-                                  style: TextStyle(fontSize: 10),
-                                ),
-                                backgroundColor: Colors.green.shade100,
-                              )
-                            : null,
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showAddAddressDialog(context);
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddAddressDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nueva dirección'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const TextField(
-                decoration: InputDecoration(
-                  labelText: 'Calle y número',
-                  prefixIcon: Icon(Icons.location_on),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const TextField(
-                decoration: InputDecoration(
-                  labelText: 'Colonia',
-                  prefixIcon: Icon(Icons.apartment),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: const TextField(
-                      decoration: InputDecoration(labelText: 'Ciudad'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: const TextField(
-                      decoration: InputDecoration(labelText: 'C.P.'),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Dirección agregada correctamente'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPaymentMethodsDialog(BuildContext context, currentUser) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Métodos de pago'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: currentUser.paymentMethods.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('No tienes métodos de pago guardados'),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: currentUser.paymentMethods.length,
-                  itemBuilder: (context, index) {
-                    final method = currentUser.paymentMethods[index];
-                    final icon = method.type == 'card'
-                        ? Icons.credit_card
-                        : Icons.account_balance_wallet;
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: Icon(icon, color: Colors.deepPurple),
-                        title: Text(method.name),
-                        subtitle: Text('**** ${method.lastFour}'),
-                        trailing: method.isDefault
-                            ? Chip(
-                                label: const Text(
-                                  'Principal',
-                                  style: TextStyle(fontSize: 10),
-                                ),
-                                backgroundColor: Colors.green.shade100,
-                              )
-                            : null,
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Método de pago agregado'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFavoritesDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Favoritos'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.favorite_border, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Aún no tienes productos favoritos',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNotificationsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Notificaciones'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile(
-              value: true,
-              onChanged: (v) {},
-              title: const Text('Ofertas y promociones'),
-              subtitle: const Text('Recibe notificaciones de descuentos'),
-            ),
-            SwitchListTile(
-              value: true,
-              onChanged: (v) {},
-              title: const Text('Actualizaciones de pedidos'),
-              subtitle: const Text('Estado de tus pedidos'),
-            ),
-            SwitchListTile(
-              value: false,
-              onChanged: (v) {},
-              title: const Text('Nuevos productos'),
-              subtitle: const Text('Cuando hay productos nuevos'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Preferencias guardadas'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showChangePasswordDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cambiar contraseña'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const TextField(
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Contraseña actual',
-                prefixIcon: Icon(Icons.lock_outline),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const TextField(
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Nueva contraseña',
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const TextField(
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Confirmar contraseña',
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contraseña actualizada correctamente'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Cambiar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ayuda y soporte'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _HelpItem(
-                icon: Icons.phone,
-                title: 'Teléfono',
-                subtitle: '+52 55 1234 5678',
-              ),
-              _HelpItem(
-                icon: Icons.email,
-                title: 'Email',
-                subtitle: 'soporte@cremosos.com',
-              ),
-              _HelpItem(
-                icon: Icons.chat,
-                title: 'Chat en vivo',
-                subtitle: 'Lun-Vie 9am-6pm',
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.question_answer),
-                label: const Text('Preguntas frecuentes'),
-              ),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.policy),
-                label: const Text('Términos y condiciones'),
-              ),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.privacy_tip),
-                label: const Text('Política de privacidad'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Widgets adicionales
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
-}
-
-class _HelpItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _HelpItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.deepPurple),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _InfoCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.deepPurple),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
+  String _getRoleName(String? role) {
+    switch (role) {
+      case 'UserRole.admin':
+        return 'ADMINISTRADOR';
+      case 'UserRole.employee':
+        return 'EMPLEADO';
+      default:
+        return 'CLIENTE';
+    }
   }
 }

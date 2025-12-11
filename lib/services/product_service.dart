@@ -43,8 +43,8 @@ class ProductService {
       );
 
       if (response.statusCode == 200) {
-        // Retornar directamente la lista de productos
-        return response.data['products'] ?? [];
+        // Backend devuelve {success: true, data: [...], meta: {...}}
+        return response.data['data'] ?? [];
       } else {
         throw Exception('Error al obtener productos');
       }

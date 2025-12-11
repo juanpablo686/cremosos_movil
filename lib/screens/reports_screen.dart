@@ -1,342 +1,319 @@
-// screens/reports_screen.dart
+// Importaciones necesarias
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/reports_provider.dart';
-import '../providers/auth_provider.dart';
-import '../models/user.dart';
+import 'package:fl_chart/fl_chart.dart'; // Librería para gráficos
+import '../widgets/app_drawer.dart';
+import '../services/api_service.dart';
 
-class ReportsScreen extends ConsumerWidget {
+// Pantalla de Reportes y Estadísticas
+// EXPLICAR: Muestra dashboards con gráficos de ventas y estadísticas del negocio
+class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isAuthenticated = ref.watch(isAuthenticatedProvider);
-    final authState = ref.watch(authProvider);
-    final isAdmin = authState.user?.role == UserRole.admin;
+  ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
+}
 
-    if (!isAuthenticated) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Reportes')),
-        body: const Center(child: Text('Inicia sesión para ver reportes.')),
-      );
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
+  Map<String, dynamic>?
+  dashboardData; // Datos del dashboard (totales, promedios)
+  List<dynamic> recentSales = []; // Ventas recientes para mostrar
+  bool isLoading = true; // Estado de carga
+  String? errorMessage; // Mensaje de error si falla la carga
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReports(); // Cargar reportes al abrir la pantalla
+  }
+
+  // Cargar datos de reportes desde la API
+  // EXPLICAR: Obtiene estadísticas del endpoint /reports/dashboard
+  Future<void> _loadReports() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final apiService = ApiService();
+
+      // Obtener datos del dashboard (totales de ventas, pedidos, productos)
+      final dashboardResponse = await apiService.get('/reports/dashboard');
+
+      setState(() {
+        dashboardData = dashboardResponse.data['data'];
+        recentSales = [];
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al cargar reportes: $e';
+        isLoading = false;
+      });
     }
+  }
 
-    if (!isAdmin) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Reportes')),
-        body: const Center(
-          child: Text(
-            'No tienes permisos para ver reportes.\nSolo administradores.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16),
-          ),
-        ),
-      );
-    }
-
-    final activeBanners = ref.watch(activeBannersProvider);
-    final salesReport = ref.watch(salesReportProvider);
-    final topProducts = ref.watch(topProductsProvider);
-    final dailySales = ref.watch(dailySalesProvider);
-
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Panel de Administración'),
+        title: const Text('Reportes y Estadísticas'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(reportsProvider.notifier).refresh(),
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadReports),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.read(reportsProvider.notifier).refresh(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Statistics Cards
-              Text(
-                'Resumen General',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Row(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Ventas Totales',
-                      value:
-                          '\$${salesReport?.totalSales.toStringAsFixed(0) ?? "0"}',
-                      icon: Icons.attach_money,
-                      color: Colors.green,
-                    ),
+                  Text(
+                    errorMessage!,
+                    style: const TextStyle(color: Colors.red),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Pedidos',
-                      value: '${salesReport?.totalOrders ?? 0}',
-                      icon: Icons.shopping_cart,
-                      color: Colors.blue,
-                    ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadReports,
+                    child: const Text('Reintentar'),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Clientes',
-                      value: '${salesReport?.totalCustomers ?? 0}',
-                      icon: Icons.people,
-                      color: Colors.purple,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Crecimiento',
-                      value:
-                          '${salesReport?.growthRate.toStringAsFixed(1) ?? "0.0"}%',
-                      icon: Icons.trending_up,
-                      color: Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-              Text(
-                'Banners Activos (${activeBanners.length})',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              if (activeBanners.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: Text('No hay banners activos')),
-                  ),
-                )
-              else
-                ...activeBanners.map(
-                  (banner) => Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.image,
-                        color: banner.backgroundColor != null
-                            ? Color(
-                                int.parse(
-                                  '0xFF${banner.backgroundColor!.substring(1)}',
-                                ),
-                              )
-                            : Colors.grey,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Ventas Totales',
+                          value:
+                              '\$${dashboardData?['totalSales']?.toStringAsFixed(0) ?? '0'} COP',
+                          icon: Icons.attach_money,
+                          color: Colors.green,
+                        ),
                       ),
-                      title: Text(
-                        banner.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Total Pedidos',
+                          value: '${dashboardData?['totalOrders'] ?? 0}',
+                          icon: Icons.shopping_bag,
+                          color: Colors.blue,
+                        ),
                       ),
-                      subtitle: Text(banner.subtitle ?? ''),
-                      trailing: Text(
-                        'Prioridad: ${banner.priority}',
-                        style: const TextStyle(fontSize: 12),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _StatCard(
+                          title: 'Clientes Activos',
+                          value: '${dashboardData?['activeCustomers'] ?? 0}',
+                          icon: Icons.people,
+                          color: Colors.orange,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-
-              const SizedBox(height: 32),
-              Text(
-                'Productos Más Vendidos',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              ...topProducts
-                  .take(5)
-                  .map(
-                    (product) => Card(
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Ventas por Categoría',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 300,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: _buildCategoryChart(),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Ventas de la Semana',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 300,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: _buildWeeklySalesChart(),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Ventas Recientes',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ...recentSales.map(
+                    (sale) => Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          child: Text('${topProducts.indexOf(product) + 1}'),
+                        leading: const CircleAvatar(
+                          backgroundColor: Colors.green,
+                          child: Icon(Icons.shopping_bag, color: Colors.white),
                         ),
-                        title: Text(
-                          product.productName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text('${product.units} unidades vendidas'),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '\$${product.sales.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Icon(
-                              product.trend > 0
-                                  ? Icons.trending_up
-                                  : Icons.trending_down,
-                              size: 16,
-                              color: product.trend > 0
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ],
+                        title: Text('Venta ${sale['saleNumber']}'),
+                        subtitle: Text(sale['customerName'] ?? 'Cliente'),
+                        trailing: Text(
+                          '\$${sale['total']?.toStringAsFixed(0) ?? '0'} COP',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+    );
+  }
 
-              const SizedBox(height: 32),
-              Text(
-                'Ventas Diarias (Última Semana)',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: dailySales.reversed.map((day) {
-                      final weekDay = switch (day.date.weekday) {
-                        1 => 'Lunes',
-                        2 => 'Martes',
-                        3 => 'Miércoles',
-                        4 => 'Jueves',
-                        5 => 'Viernes',
-                        6 => 'Sábado',
-                        7 => 'Domingo',
-                        _ => '',
-                      };
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 80,
-                              child: Text(
-                                weekDay,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  FractionallySizedBox(
-                                    widthFactor:
-                                        day.sales /
-                                        dailySales
-                                            .map((d) => d.sales)
-                                            .reduce((a, b) => a > b ? a : b),
-                                    child: Container(
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Colors.deepPurple,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            SizedBox(
-                              width: 100,
-                              child: Text(
-                                '\$${day.sales.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.right,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
+  Widget _buildCategoryChart() {
+    final categories = dashboardData?['salesByCategory'] as List? ?? [];
 
-              const SizedBox(height: 32),
-              Text(
-                'Ventas por Categoría',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: (salesReport?.categorySales ?? [])
-                        .map(
-                          (category) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    category.category,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 60,
-                                  child: Text(
-                                    '${category.percentage.toStringAsFixed(1)}%',
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                SizedBox(
-                                  width: 100,
-                                  child: Text(
-                                    '\$${category.sales.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ),
-            ],
+    if (categories.isEmpty) {
+      return const Center(child: Text('No hay datos de ventas por categoría'));
+    }
+
+    final colors = [
+      Colors.purple,
+      Colors.pink,
+      Colors.orange,
+      Colors.blue,
+      Colors.green,
+      Colors.red,
+      Colors.teal,
+    ];
+
+    return PieChart(
+      PieChartData(
+        sections: categories.asMap().entries.map((entry) {
+          final index = entry.key;
+          final cat = entry.value;
+          final percentage = double.tryParse(cat['percentage'].toString()) ?? 0;
+
+          return PieChartSectionData(
+            value: percentage,
+            title:
+                '${_getCategoryName(cat['category'])}\n${percentage.toStringAsFixed(0)}%',
+            color: colors[index % colors.length],
+            radius: 100,
+            titleStyle: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          );
+        }).toList(),
+        sectionsSpace: 2,
+        centerSpaceRadius: 0,
+      ),
+    );
+  }
+
+  String _getCategoryName(String category) {
+    final names = {
+      'arroz_con_leche': 'Arroz',
+      'fresas_con_crema': 'Fresas',
+      'postres_especiales': 'Postres Esp.',
+      'bebidas_cremosas': 'Bebidas Crem.',
+      'toppings': 'Toppings',
+      'bebidas': 'Bebidas',
+      'postres': 'Postres',
+    };
+    return names[category] ?? category;
+  }
+
+  Widget _buildWeeklySalesChart() {
+    final dailySales = dashboardData?['dailySales'] as List? ?? [];
+
+    if (dailySales.isEmpty) {
+      return const Center(child: Text('No hay datos de ventas semanales'));
+    }
+
+    final maxSales = dailySales.fold<double>(
+      0,
+      (max, day) => (day['sales'] as num).toDouble() > max
+          ? (day['sales'] as num).toDouble()
+          : max,
+    );
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxSales > 0 ? maxSales * 1.2 : 100000,
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= dailySales.length) return const Text('');
+                final date = dailySales[value.toInt()]['date'] as String;
+                final day = DateTime.parse(date).day;
+                return Text('$day');
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const Text('0');
+                return Text('\$${(value / 1000).toStringAsFixed(0)}k');
+              },
+              reservedSize: 50,
+            ),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
           ),
         ),
+        gridData: FlGridData(show: true, drawVerticalLine: false),
+        borderData: FlBorderData(show: false),
+        barGroups: dailySales.asMap().entries.map((entry) {
+          final index = entry.key;
+          final day = entry.value;
+          final sales = (day['sales'] as num).toDouble();
+
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(toY: sales, color: Colors.purple, width: 20),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -357,36 +334,39 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 40, color: color),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
