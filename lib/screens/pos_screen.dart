@@ -202,10 +202,7 @@ class _POSScreenState extends ConsumerState<POSScreen> {
 
                 print('Enviando venta: $saleData'); // Debug
 
-                final response = await apiService.post(
-                  '/sales',
-                  data: saleData,
-                );
+                final response = await apiService.post('sales', data: saleData);
 
                 // Cerrar indicador de carga
                 if (context.mounted) Navigator.pop(context);

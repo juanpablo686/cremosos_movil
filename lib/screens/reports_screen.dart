@@ -43,7 +43,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
       setState(() {
         dashboardData = dashboardResponse.data['data'];
-        recentSales = [];
+        recentSales = dashboardResponse.data['data']['recentOrders'] ?? [];
         isLoading = false;
       });
     } catch (e) {
@@ -171,6 +171,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
+                  if (recentSales.isNotEmpty)
+                    Container(
+                      height: 300,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _buildRecentSalesChart(),
+                    ),
+                  const SizedBox(height: 16),
                   ...recentSales.map(
                     (sale) => Card(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -179,8 +197,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           backgroundColor: Colors.green,
                           child: Icon(Icons.shopping_bag, color: Colors.white),
                         ),
-                        title: Text('Venta ${sale['saleNumber']}'),
-                        subtitle: Text(sale['customerName'] ?? 'Cliente'),
+                        title: Text('Pedido #${sale['orderNumber']}'),
+                        subtitle: Text(
+                          'Estado: ${_getStatusText(sale['status'])}',
+                        ),
                         trailing: Text(
                           '\$${sale['total']?.toStringAsFixed(0) ?? '0'} COP',
                           style: const TextStyle(
@@ -201,7 +221,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final categories = dashboardData?['salesByCategory'] as List? ?? [];
 
     if (categories.isEmpty) {
-      return const Center(child: Text('No hay datos de ventas por categoría'));
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.pie_chart_outline, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No hay datos de ventas por categoría',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ],
+        ),
+      );
     }
 
     final colors = [
@@ -214,29 +246,71 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       Colors.teal,
     ];
 
-    return PieChart(
-      PieChartData(
-        sections: categories.asMap().entries.map((entry) {
-          final index = entry.key;
-          final cat = entry.value;
-          final percentage = double.tryParse(cat['percentage'].toString()) ?? 0;
+    // Calcular total de ventas para los porcentajes
+    final totalSales = categories.fold<double>(
+      0,
+      (sum, cat) => sum + ((cat['sales'] as num?)?.toDouble() ?? 0),
+    );
 
-          return PieChartSectionData(
-            value: percentage,
-            title:
-                '${_getCategoryName(cat['category'])}\n${percentage.toStringAsFixed(0)}%',
-            color: colors[index % colors.length],
-            radius: 100,
-            titleStyle: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+    return Column(
+      children: [
+        Expanded(
+          child: PieChart(
+            PieChartData(
+              sections: categories.asMap().entries.map((entry) {
+                final index = entry.key;
+                final cat = entry.value;
+                final sales = (cat['sales'] as num?)?.toDouble() ?? 0;
+                final percentage = totalSales > 0
+                    ? (sales / totalSales * 100)
+                    : 0;
+
+                return PieChartSectionData(
+                  value: sales,
+                  title: '${percentage.toStringAsFixed(1)}%',
+                  color: colors[index % colors.length],
+                  radius: 110,
+                  titleStyle: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                );
+              }).toList(),
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
             ),
-          );
-        }).toList(),
-        sectionsSpace: 2,
-        centerSpaceRadius: 0,
-      ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: categories.asMap().entries.map((entry) {
+            final index = entry.key;
+            final cat = entry.value;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: colors[index % colors.length],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _getCategoryName(cat['category']),
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -316,6 +390,88 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         }).toList(),
       ),
     );
+  }
+
+  Widget _buildRecentSalesChart() {
+    if (recentSales.isEmpty) {
+      return const Center(child: Text('No hay ventas recientes'));
+    }
+
+    final maxTotal = recentSales.fold<double>(
+      0,
+      (max, sale) => (sale['total'] as num).toDouble() > max
+          ? (sale['total'] as num).toDouble()
+          : max,
+    );
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxTotal > 0 ? maxTotal * 1.2 : 100000,
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= recentSales.length) return const Text('');
+                return Text('#${recentSales[value.toInt()]['orderNumber']}');
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const Text('0');
+                return Text('\$${(value / 1000).toStringAsFixed(0)}k');
+              },
+              reservedSize: 50,
+            ),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        gridData: FlGridData(show: true, drawVerticalLine: false),
+        borderData: FlBorderData(show: false),
+        barGroups: recentSales.asMap().entries.map((entry) {
+          final index = entry.key;
+          final sale = entry.value;
+          final total = (sale['total'] as num).toDouble();
+
+          // Colores según el estado del pedido
+          Color barColor = Colors.green;
+          if (sale['status'] == 'pending') {
+            barColor = Colors.orange;
+          } else if (sale['status'] == 'processing') {
+            barColor = Colors.blue;
+          } else if (sale['status'] == 'shipped') {
+            barColor = Colors.purple;
+          } else if (sale['status'] == 'cancelled') {
+            barColor = Colors.red;
+          }
+
+          return BarChartGroupData(
+            x: index,
+            barRods: [BarChartRodData(toY: total, color: barColor, width: 20)],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _getStatusText(String status) {
+    final statusMap = {
+      'pending': 'Pendiente',
+      'processing': 'Procesando',
+      'shipped': 'Enviado',
+      'delivered': 'Entregado',
+      'cancelled': 'Cancelado',
+    };
+    return statusMap[status] ?? status;
   }
 }
 
