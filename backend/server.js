@@ -14,6 +14,7 @@ const SECRET_KEY = 'cremosos_secret_2024';
 // Middleware
 app.use(cors()); // Permitir peticiones desde Flutter
 app.use(express.json()); // Parsear JSON en el body
+app.use('/images', express.static('images')); // Servir imágenes estáticas
 
 // ========================================
 // DATOS MOCK EN MEMORIA
@@ -85,165 +86,86 @@ let users = [
 // Función helper para generar productos
 function generateProducts() {
   const products = [];
-  let idCounter = 1;
   
-  // Imágenes de Unsplash por categoría
-  const categoryImages = {
-    'arroz_con_leche': [
-      'https://images.unsplash.com/photo-1562440499-64c9a111f713?w=400',
-      'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400',
-      'https://images.unsplash.com/photo-1563379091339-03b47878d44e?w=400',
-      'https://images.unsplash.com/photo-1587536849024-daaa4a417b16?w=400',
-      'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
-      'https://images.unsplash.com/photo-1514517521153-1be72277b32f?w=400',
-      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400',
-      'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400',
-      'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400',
-      'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400'
-    ],
-    'fresas_con_crema': [
-      'https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=400',
-      'https://images.unsplash.com/photo-1543158181-e6f9f6712055?w=400',
-      'https://images.unsplash.com/photo-1495147466023-ac5c588e2e94?w=400',
-      'https://images.unsplash.com/photo-1518635017498-87f514b751ba?w=400',
-      'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?w=400',
-      'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400',
-      'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=400',
-      'https://images.unsplash.com/photo-1519915212116-715746f85164?w=400',
-      'https://images.unsplash.com/photo-1563379091339-03b47878d44e?w=400'
-    ],
-    'postres_especiales': [
-      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400',
-      'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400',
-      'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400',
-      'https://images.unsplash.com/photo-1571115177098-24ec42ed204d?w=400',
-      'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400',
-      'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
-      'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400',
-      'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400',
-      'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400',
-      'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=400'
-    ],
-    'bebidas_cremosas': [
-      'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400',
-      'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=400',
-      'https://images.unsplash.com/photo-1577805947697-89e18249d767?w=400',
-      'https://images.unsplash.com/photo-1568471173238-64ed8e7e9e4d?w=400',
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
-      'https://images.unsplash.com/photo-1587080413959-06b859fb107d?w=400',
-      'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400',
-      'https://images.unsplash.com/photo-1546548970-71785318a17b?w=400',
-      'https://images.unsplash.com/photo-1526082977814-e8b33154ef12?w=400',
-      'https://images.unsplash.com/photo-1553787434-6f949374d7af?w=400'
-    ],
-    'toppings': [
-      'https://images.unsplash.com/photo-1481391243133-f96216dcb5d2?w=400',
-      'https://images.unsplash.com/photo-1511381939415-e44015466834?w=400',
-      'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400',
-      'https://images.unsplash.com/photo-1563379091339-03b47878d44e?w=400',
-      'https://images.unsplash.com/photo-1582716401301-b2407dc7563d?w=400',
-      'https://images.unsplash.com/photo-1541167232569-283a2b39f2e5?w=400',
-      'https://images.unsplash.com/photo-1599599810694-4f0d1b6e0c78?w=400',
-      'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-      'https://images.unsplash.com/photo-1568471173238-64ed8e7e9e4d?w=400',
-      'https://images.unsplash.com/photo-1562440499-64c9a111f713?w=400'
-    ],
-    'bebidas': [
-      'https://images.unsplash.com/photo-1523294587484-bae6cc870010?w=400',
-      'https://images.unsplash.com/photo-1437418747212-8d9709afab22?w=400',
-      'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=400',
-      'https://images.unsplash.com/photo-1541544537156-7627a7a4aa1c?w=400',
-      'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400',
-      'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400',
-      'https://images.unsplash.com/photo-1587080413959-06b859fb107d?w=400',
-      'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',
-      'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400',
-      'https://images.unsplash.com/photo-1546548970-71785318a17b?w=400'
-    ],
-    'postres': [
-      'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400',
-      'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?w=400',
-      'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=400',
-      'https://images.unsplash.com/photo-1560008581-09826d1de69e?w=400',
-      'https://images.unsplash.com/photo-1588195538326-c5b1e5b80634?w=400',
-      'https://images.unsplash.com/photo-1567327684330-5d86e92e82b7?w=400',
-      'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=400',
-      'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400',
-      'https://images.unsplash.com/photo-1516714819001-8ee7a13b71d7?w=400',
-      'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400'
-    ]
-  };
-  
-  // Categorías y sus variaciones
-  const categories = {
-    'arroz_con_leche': {
-      variations: ['Clásico', 'con Coco', 'con Canela', 'con Pasas', 'Vainilla', 'Chocolate', 'Café', 'Frutas', 'con Nueces', 'con Almendras', 'Tradicional', 'Premium', 'Light', 'con Miel', 'con Caramelo', 'con Frutos Secos', 'Especiado', 'con Leche Condensada', 'con Arequipe', 'Gourmet'],
-      basePrice: 8000,
-      priceRange: 3000
-    },
-    'fresas_con_crema': {
-      variations: ['Premium', 'Clásicas', 'con Chocolate', 'con Leche Condensada', 'Gourmet', 'Light', 'con Arequipe', 'con Nueces', 'con Miel', 'Extra Grandes', 'con Crema Batida', 'con Yogurt', 'Naturales', 'Orgánicas', 'con Granola', 'con Chantilly', 'Especiales', 'con Almendras', 'con Coco', 'Deluxe'],
-      basePrice: 12000,
-      priceRange: 4000
-    },
-    'postres_especiales': {
-      variations: ['Tiramisú', 'Cheesecake', 'Brownie', 'Mousse', 'Panna Cotta', 'Flan', 'Tres Leches', 'Profiteroles', 'Éclair', 'Mil Hojas', 'Opera', 'Crème Brûlée', 'Tarta', 'Coulant', 'Merengue', 'Suspiro', 'Natilla', 'Marquesa', 'Brazo Gitano', 'Carlota'],
-      basePrice: 15000,
-      priceRange: 8000
-    },
-    'bebidas_cremosas': {
-      variations: ['Malteada Vainilla', 'Malteada Chocolate', 'Malteada Fresa', 'Smoothie Mix', 'Frappe Café', 'Frappe Mocca', 'Licuado Frutas', 'Batido Protein', 'Smoothie Verde', 'Malteada Oreo', 'Frappe Caramelo', 'Batido Tropical', 'Smoothie Berry', 'Licuado Mango', 'Malteada Cookies', 'Frappe Vainilla', 'Batido Banana', 'Smoothie Detox', 'Licuado Papaya', 'Malteada Nutella'],
-      basePrice: 10000,
-      priceRange: 5000
-    },
-    'toppings': {
-      variations: ['Arequipe', 'Chocolate', 'Fresa', 'Miel', 'Caramelo', 'Nutella', 'Mermelada', 'Frutos Secos', 'Granola', 'Coco', 'Chispas', 'Oreo', 'M&Ms', 'Gomitas', 'Brownie', 'Galletas', 'Marshmallow', 'Cerezas', 'Almendras', 'Mani'],
-      basePrice: 3000,
-      priceRange: 2000
-    },
-    'bebidas': {
-      variations: ['Agua', 'Gaseosa', 'Jugo Natural', 'Té Frío', 'Limonada', 'Café', 'Chocolate Caliente', 'Aromática', 'Jugo Naranja', 'Jugo Mora', 'Té Verde', 'Coca Cola', 'Sprite', 'Fanta', 'Agua Saborizada', 'Jugo Mango', 'Limonada Coco', 'Té Limón', 'Jugo Lulo', 'Agua con Gas'],
-      basePrice: 4000,
-      priceRange: 3000
-    },
-    'postres': {
-      variations: ['Helado Vainilla', 'Helado Chocolate', 'Helado Fresa', 'Gelatina', 'Pudín', 'Copa Helada', 'Sundae', 'Banana Split', 'Parfait', 'Postre Oreo', 'Postre Brownie', 'Copa Frutas', 'Helado Napolitano', 'Postre Caramelo', 'Copa Arequipe', 'Helado Galleta', 'Postre Nutella', 'Copa Tropical', 'Helado Menta', 'Postre Café'],
-      basePrice: 9000,
-      priceRange: 6000
-    }
-  };
+  // Arroz con leche - Tamaño Grande ($9,000)
+  const arrozGrande = [
+    { id: 'prod1', name: 'Arroz con Leche Tradicional - Grande', sabor: 'Tradicional', image: 'arroz_tradicional.jpg', price: 9000, size: 'Grande' },
+    { id: 'prod2', name: 'Arroz con Leche de Arequipe - Grande', sabor: 'Arequipe', image: 'arroz_arequipe.jpg', price: 9000, size: 'Grande' },
+    { id: 'prod3', name: 'Arroz con Leche de Maracuyá - Grande', sabor: 'Maracuyá', image: 'arroz_maracuya.jpg', price: 9000, size: 'Grande' },
+    { id: 'prod4', name: 'Arroz con Leche de Chocolate - Grande', sabor: 'Chocolate', image: 'arroz_chocolate.jpg', price: 9000, size: 'Grande' }
+  ];
 
-  // Generar productos para cada categoría
-  Object.entries(categories).forEach(([category, data]) => {
-    const images = categoryImages[category];
+  // Arroz con leche - Tamaño Pequeño ($6,000) - misma imagen
+  const arrozPequeno = [
+    { id: 'prod5', name: 'Arroz con Leche Tradicional - Pequeño', sabor: 'Tradicional', image: 'arroz_tradicional.jpg', price: 6000, size: 'Pequeño' },
+    { id: 'prod6', name: 'Arroz con Leche de Arequipe - Pequeño', sabor: 'Arequipe', image: 'arroz_arequipe.jpg', price: 6000, size: 'Pequeño' },
+    { id: 'prod7', name: 'Arroz con Leche de Maracuyá - Pequeño', sabor: 'Maracuyá', image: 'arroz_maracuya.jpg', price: 6000, size: 'Pequeño' },
+    { id: 'prod8', name: 'Arroz con Leche de Chocolate - Pequeño', sabor: 'Chocolate', image: 'arroz_chocolate.jpg', price: 6000, size: 'Pequeño' }
+  ];
+
+  // Fresas con crema - todas usan la misma imagen
+  const fresas2Toppings = [
+    { id: 'prod9', name: 'Fresas con Crema - 2 Toppings ($9.000)', toppings: 2, image: 'fresas_con_crema.jpg', price: 9000 }
+  ];
+
+  const fresas3Toppings = [
+    { id: 'prod10', name: 'Fresas con Crema - 3 Toppings ($11.000)', toppings: 3, image: 'fresas_con_crema.jpg', price: 11000 }
+  ];
+
+  const fresas4Toppings = [
+    { id: 'prod11', name: 'Fresas con Crema - 4 Toppings ($16.000)', toppings: 4, image: 'fresas_con_crema.jpg', price: 16000 }
+  ];
+
+  // Lista de toppings disponibles
+  const toppingsDisponibles = [
+    'Chocolate', 'Arequipe', 'Fresa', 'Vainilla', 'Caramelo', 
+    'Nutella', 'Crema Chantilly', 'Galletas Oreo', 'Frutos Secos', 
+    'Chispas de Chocolate', 'Coco Rallado', 'Miel'
+  ];
+
+  // Construir array de productos
+  const allProducts = [
+    ...arrozGrande,
+    ...arrozPequeno,
+    ...fresas2Toppings,
+    ...fresas3Toppings,
+    ...fresas4Toppings
+  ];
+
+  // Formatear productos para la API
+  allProducts.forEach((prod, index) => {
+    const isArroz = prod.sabor !== undefined;
+    const isFresa = prod.toppings !== undefined;
     
-    data.variations.forEach((variation, index) => {
-      const price = data.basePrice + Math.floor(Math.random() * data.priceRange);
-      const stock = 20 + Math.floor(Math.random() * 80); // Stock entre 20-100
-      const rating = 3.5 + (Math.random() * 1.5); // Rating entre 3.5-5.0
-      const reviewsCount = Math.floor(Math.random() * 100); // 0-100 reviews
-      
-      // Seleccionar imagen de forma cíclica
-      const imageUrl = images[index % images.length];
-      
-      products.push({
-        id: `prod${idCounter}`,
-        name: `${variation}`,
-        description: `Delicioso ${variation.toLowerCase()} preparado con ingredientes frescos y de la mejor calidad`,
-        price: price,
-        imageUrl: imageUrl,
-        category: category,
-        stock: stock,
-        rating: Math.round(rating * 10) / 10,
-        reviewsCount: reviewsCount,
-        isAvailable: true,
-        isFeatured: index < 3, // Los primeros 3 de cada categoría son destacados
-        compatibleToppings: ['top1', 'top2', 'top3'],
-        createdAt: new Date().toISOString()
-      });
-      
-      idCounter++;
+    let description = '';
+    let toppingsSeleccionados = [];
+    
+    if (isArroz) {
+      description = `Delicioso arroz con leche sabor ${prod.sabor.toLowerCase()}. Tamaño ${prod.size}: $${prod.price.toLocaleString('es-CO')}`;
+    } else if (isFresa) {
+      description = `Fresas frescas con crema y ${prod.toppings} toppings a elegir. Precio: $${prod.price.toLocaleString('es-CO')}`;
+      // Seleccionar toppings aleatorios
+      const shuffled = [...toppingsDisponibles].sort(() => 0.5 - Math.random());
+      toppingsSeleccionados = shuffled.slice(0, prod.toppings);
+    }
+
+    products.push({
+      id: prod.id,
+      name: prod.name,
+      description: description,
+      price: prod.price,
+      imageUrl: `http://localhost:3000/images/${prod.image}`,
+      category: isArroz ? 'arroz_con_leche' : 'fresas_con_crema',
+      stock: 50,
+      rating: 4.8,
+      reviewsCount: 120,
+      isAvailable: true,
+      isFeatured: index < 4,
+      toppingsIncluidos: isFresa ? prod.toppings : 0,
+      toppingsDisponibles: isFresa ? toppingsSeleccionados : [],
+      sabor: isArroz ? prod.sabor : null,
+      tamaño: isArroz ? prod.size : null,
+      createdAt: new Date().toISOString()
     });
   });
 
@@ -251,28 +173,6 @@ function generateProducts() {
 }
 
 let products = generateProducts();
-
-// Reordenar productos para que fresas_con_crema y arroz_con_leche aparezcan primero
-products.sort((a, b) => {
-  const priorityOrder = {
-    'fresas_con_crema': 1,
-    'arroz_con_leche': 2,
-    'postres_especiales': 3,
-    'bebidas_cremosas': 4,
-    'postres': 5,
-    'toppings': 6,
-    'bebidas': 7
-  };
-  
-  const priorityA = priorityOrder[a.category] || 999;
-  const priorityB = priorityOrder[b.category] || 999;
-  
-  if (priorityA !== priorityB) {
-    return priorityA - priorityB;
-  }
-  
-  return a.name.localeCompare(b.name);
-});
 
 let carts = {};
 

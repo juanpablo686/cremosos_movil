@@ -39,7 +39,38 @@ class MyApp extends ConsumerWidget {
       title: 'Cremosos E-Commerce',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF87CEEB), // Azul cielo
+          primary: const Color(0xFF87CEEB), // Azul cielo
+          secondary: const Color(0xFF800020), // Vinotinto
+        ),
+        primaryColor: const Color(0xFF87CEEB), // Azul cielo
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF87CEEB), // Azul cielo
+          foregroundColor: Colors.white,
+          elevation: 2,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF800020), // Vinotinto
+          foregroundColor: Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF800020), // Vinotinto
+            foregroundColor: Colors.white,
+            elevation: 2,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
         useMaterial3: true,
       ),
       home: homeWidget,
