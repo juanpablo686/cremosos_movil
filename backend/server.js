@@ -6,6 +6,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const db = require('./db-manager');
 
 const app = express();
 const PORT = 3000;
@@ -17,7 +18,27 @@ app.use(express.json()); // Parsear JSON en el body
 app.use('/images', express.static('images')); // Servir imágenes estáticas
 
 // ========================================
-// DATOS MOCK EN MEMORIA
+// HELPERS PARA ACCESO A BASE DE DATOS
+// ========================================
+async function getProducts() { return await db.read('products'); }
+async function saveProducts(data) { return await db.write('products', data); }
+async function getUsers() { return await db.read('users'); }
+async function saveUsers(data) { return await db.write('users', data); }
+async function getOrders() { return await db.read('orders'); }
+async function saveOrders(data) { return await db.write('orders', data); }
+async function getSales() { return await db.read('sales'); }
+async function saveSales(data) { return await db.write('sales', data); }
+async function getCarts() { return await db.read('cart'); }
+async function saveCarts(data) { return await db.write('cart', data); }
+async function getRoles() { return await db.read('roles'); }
+async function saveRoles(data) { return await db.write('roles', data); }
+async function getSuppliers() { return await db.read('suppliers'); }
+async function saveSuppliers(data) { return await db.write('suppliers', data); }
+async function getPurchases() { return await db.read('purchases'); }
+async function savePurchases(data) { return await db.write('purchases', data); }
+
+// ========================================
+// DATOS INICIALES (se migrarán a DB JSON)
 // ========================================
 
 let users = [
@@ -455,9 +476,10 @@ function authenticateToken(req, res, next) {
 // ========================================
 
 // 1. POST /api/auth/login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
+  const users = await getUsers();
   const user = users.find(u => u.email === email && u.password === password);
 
   if (!user) {
@@ -490,9 +512,10 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // 2. POST /api/auth/register
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, phone } = req.body;
 
+  const users = await getUsers();
   if (users.find(u => u.email === email)) {
     return res.status(400).json({
       success: false,
@@ -580,9 +603,10 @@ app.put('/api/users/profile', authenticateToken, (req, res) => {
 // ========================================
 
 // 5. GET /api/products
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   let { category, page = 1, limit = 20, search, sortBy = 'name', sortOrder = 'asc' } = req.query;
 
+  const products = await db.read('products');
   let filtered = [...products];
 
   // Filtrar por categoría
@@ -629,7 +653,8 @@ app.get('/api/products', (req, res) => {
 });
 
 // 6. GET /api/products/:id
-app.get('/api/products/:id', (req, res) => {
+app.get('/api/products/:id', async (req, res) => {
+  const products = await db.read('products');
   const product = products.find(p => p.id === req.params.id);
 
   if (!product) {
@@ -646,7 +671,8 @@ app.get('/api/products/:id', (req, res) => {
 });
 
 // 7. GET /api/products/featured
-app.get('/api/products/featured', (req, res) => {
+app.get('/api/products/featured', async (req, res) => {
+  const products = await db.read('products');
   const featured = products.filter(p => p.isFeatured);
 
   res.json({
@@ -656,40 +682,48 @@ app.get('/api/products/featured', (req, res) => {
 });
 
 // 7a. POST /api/products (CREATE)
-app.post('/api/products', authenticateToken, (req, res) => {
-  // Verificar permisos de admin
-  if (req.user.role !== 'admin' && req.user.role !== 'employee') {
-    return res.status(403).json({
+app.post('/api/products', authenticateToken, async (req, res) => {
+  try {
+    // Verificar permisos de admin
+    if (req.user.role !== 'admin' && req.user.role !== 'employee') {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para crear productos'
+      });
+    }
+
+    const { name, description, price, imageUrl, category, stock, isFeatured, compatibleToppings } = req.body;
+
+    const newProduct = {
+      id: `prod${Date.now()}`,
+      name,
+      description,
+      price,
+      imageUrl: imageUrl || 'https://via.placeholder.com/200',
+      category,
+      stock: stock || 0,
+      rating: 0,
+      reviewsCount: 0,
+      isAvailable: true,
+      isFeatured: isFeatured || false,
+      compatibleToppings: compatibleToppings || [],
+      createdAt: new Date().toISOString()
+    };
+
+    await db.insert('products', newProduct);
+
+    res.status(201).json({
+      success: true,
+      message: 'Producto creado exitosamente',
+      data: newProduct
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'No tienes permisos para crear productos'
+      message: 'Error al crear producto',
+      error: error.message
     });
   }
-
-  const { name, description, price, imageUrl, category, stock, isFeatured, compatibleToppings } = req.body;
-
-  const newProduct = {
-    id: `prod${products.length + 1}`,
-    name,
-    description,
-    price,
-    imageUrl: imageUrl || 'https://via.placeholder.com/200',
-    category,
-    stock: stock || 0,
-    rating: 0,
-    reviewsCount: 0,
-    isAvailable: true,
-    isFeatured: isFeatured || false,
-    compatibleToppings: compatibleToppings || [],
-    createdAt: new Date().toISOString()
-  };
-
-  products.push(newProduct);
-
-  res.status(201).json({
-    success: true,
-    message: 'Producto creado exitosamente',
-    data: newProduct
-  });
 });
 
 // 7b. PUT /api/products/:id (UPDATE)
@@ -839,7 +873,7 @@ app.get('/api/admin/users/:id', authenticateToken, (req, res) => {
 });
 
 // POST /api/admin/users (Crear usuario)
-app.post('/api/admin/users', authenticateToken, (req, res) => {
+app.post('/api/admin/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -867,7 +901,7 @@ app.post('/api/admin/users', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  users.push(newUser);
+  await db.insert('users', newUser);
 
   const { password: _, ...userWithoutPassword } = newUser;
 
@@ -983,7 +1017,7 @@ app.get('/api/roles/:id', authenticateToken, (req, res) => {
 });
 
 // POST /api/roles (Crear rol)
-app.post('/api/roles', authenticateToken, (req, res) => {
+app.post('/api/roles', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -1009,7 +1043,7 @@ app.post('/api/roles', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  roles.push(newRole);
+  await db.insert('roles', newRole);
 
   res.status(201).json({
     success: true,
@@ -1133,7 +1167,7 @@ app.get('/api/suppliers/:id', authenticateToken, (req, res) => {
 });
 
 // POST /api/suppliers (Crear proveedor)
-app.post('/api/suppliers', authenticateToken, (req, res) => {
+app.post('/api/suppliers', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -1157,7 +1191,7 @@ app.post('/api/suppliers', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  suppliers.push(newSupplier);
+  await db.insert('suppliers', newSupplier);
 
   res.status(201).json({
     success: true,
@@ -1282,7 +1316,7 @@ app.get('/api/purchases/:id', authenticateToken, (req, res) => {
 });
 
 // POST /api/purchases (Crear compra)
-app.post('/api/purchases', authenticateToken, (req, res) => {
+app.post('/api/purchases', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'employee') {
     return res.status(403).json({
       success: false,
@@ -1319,7 +1353,7 @@ app.post('/api/purchases', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  purchases.push(newPurchase);
+  await db.insert('purchases', newPurchase);
 
   res.status(201).json({
     success: true,
@@ -1438,7 +1472,7 @@ app.get('/api/sales/:id', authenticateToken, (req, res) => {
 });
 
 // POST /api/sales (Crear venta - POS)
-app.post('/api/sales', authenticateToken, (req, res) => {
+app.post('/api/sales', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'employee') {
     return res.status(403).json({
       success: false,
@@ -1514,15 +1548,18 @@ app.post('/api/sales', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  sales.push(newSale);
+  await db.insert('sales', newSale);
 
   // Actualizar stock de productos
+  const products = await getProducts();
   saleItems.forEach(item => {
     const productIndex = products.findIndex(p => p.id === item.productId);
     if (productIndex !== -1) {
       products[productIndex].stock -= item.quantity;
     }
   });
+  
+  await saveProducts(products);
 
   res.status(201).json({
     success: true,
@@ -1738,7 +1775,7 @@ app.post('/api/cart/sync', authenticateToken, (req, res) => {
 // ========================================
 
 // 14. POST /api/orders
-app.post('/api/orders', authenticateToken, (req, res) => {
+app.post('/api/orders', authenticateToken, async (req, res) => {
   const cart = carts[req.user.id];
   if (!cart || cart.items.length === 0) {
     return res.status(400).json({
@@ -1808,8 +1845,15 @@ app.post('/api/orders', authenticateToken, (req, res) => {
     estimatedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString()
   };
 
-  orders.push(newOrder);
-  carts[req.user.id].items = []; // Vaciar carrito
+  await db.insert('orders', newOrder);
+  
+  // Vaciar carrito
+  const carts = await getCarts();
+  const userCart = carts.find(c => c.userId === req.user.id);
+  if (userCart) {
+    userCart.items = [];
+    await saveCarts(carts);
+  }
 
   res.status(201).json({
     success: true,
@@ -2131,7 +2175,7 @@ app.get('/api/reports/customers', (req, res) => {
 // INICIAR SERVIDOR
 // ========================================
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║     🍚 CREMOSOS ERP API SERVER - RUNNING               ║
@@ -2221,6 +2265,70 @@ app.listen(PORT, () => {
    📊 Reportes y Análisis
   `);
   
+  // Inicializar base de datos JSON
+  await initializeDatabase();
+  
   // Servidor corriendo y esperando peticiones
   console.log('\n✅ Servidor escuchando en puerto ' + PORT + '...\n');
 });
+
+// ========================================
+// INICIALIZACIÓN DE BASE DE DATOS JSON
+// ========================================
+async function initializeDatabase() {
+  console.log('\n💾 Inicializando base de datos JSON...');
+  
+  // Inicializar archivos
+  await db.initialize();
+  
+  // Migrar datos iniciales si las colecciones están vacías
+  const existingProducts = await db.read('products');
+  if (existingProducts.length === 0) {
+    console.log('📦 Migrando productos iniciales...');
+    await db.write('products', products);
+  }
+  
+  const existingUsers = await db.read('users');
+  if (existingUsers.length === 0) {
+    console.log('👥 Migrando usuarios iniciales...');
+    await db.write('users', users);
+  }
+  
+  const existingOrders = await db.read('orders');
+  if (existingOrders.length === 0) {
+    console.log('📋 Migrando órdenes iniciales...');
+    await db.write('orders', orders);
+  }
+  
+  const existingSales = await db.read('sales');
+  if (existingSales.length === 0) {
+    console.log('💰 Migrando ventas iniciales...');
+    await db.write('sales', sales);
+  }
+  
+  const existingRoles = await db.read('roles');
+  if (existingRoles.length === 0) {
+    console.log('👔 Migrando roles iniciales...');
+    await db.write('roles', roles);
+  }
+  
+  const existingSuppliers = await db.read('suppliers');
+  if (existingSuppliers.length === 0) {
+    console.log('🏭 Migrando proveedores iniciales...');
+    await db.write('suppliers', suppliers);
+  }
+  
+  const existingPurchases = await db.read('purchases');
+  if (existingPurchases.length === 0) {
+    console.log('📥 Migrando compras iniciales...');
+    await db.write('purchases', purchases);
+  }
+  
+  const existingCart = await db.read('cart');
+  if (existingCart.length === 0) {
+    console.log('🛒 Migrando carritos iniciales...');
+    await db.write('cart', carts);
+  }
+  
+  console.log('✅ Base de datos JSON lista y sincronizada\n');
+}

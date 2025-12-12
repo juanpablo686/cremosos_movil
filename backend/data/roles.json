@@ -1,0 +1,55 @@
+[
+  {
+    "id": "role1",
+    "name": "admin",
+    "displayName": "Administrador",
+    "description": "Acceso completo al sistema",
+    "permissions": [
+      "users.create",
+      "users.read",
+      "users.update",
+      "users.delete",
+      "products.create",
+      "products.read",
+      "products.update",
+      "products.delete",
+      "orders.read",
+      "orders.update",
+      "reports.read",
+      "purchases.create",
+      "purchases.read",
+      "purchases.update",
+      "purchases.delete",
+      "sales.create",
+      "sales.read",
+      "roles.manage"
+    ],
+    "createdAt": "2025-12-12T04:26:18.076Z"
+  },
+  {
+    "id": "role2",
+    "name": "employee",
+    "displayName": "Empleado",
+    "description": "Gestión de ventas y productos",
+    "permissions": [
+      "products.read",
+      "sales.create",
+      "sales.read",
+      "orders.read",
+      "orders.update"
+    ],
+    "createdAt": "2025-12-12T04:26:18.076Z"
+  },
+  {
+    "id": "role3",
+    "name": "customer",
+    "displayName": "Cliente",
+    "description": "Usuario final del sistema",
+    "permissions": [
+      "products.read",
+      "orders.create",
+      "orders.read"
+    ],
+    "createdAt": "2025-12-12T04:26:18.076Z"
+  }
+]
