@@ -1,0 +1,81 @@
+[
+  {
+    "id": "order1",
+    "orderNumber": "ORD-2024-0001",
+    "userId": "user1",
+    "userName": "Juan Admin",
+    "userEmail": "admin@cremosos.com",
+    "items": [
+      {
+        "id": "item1",
+        "productId": "prod1",
+        "productName": "Arroz con Leche Tradicional",
+        "productPrice": 18000,
+        "productImage": "https://images.unsplash.com/photo-1562440499-64c9a111f713?w=400",
+        "quantity": 3,
+        "subtotal": 54000
+      },
+      {
+        "id": "item2",
+        "productId": "prod2",
+        "productName": "Fresas con Crema Premium",
+        "productPrice": 22000,
+        "productImage": "https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=400",
+        "quantity": 2,
+        "subtotal": 44000
+      }
+    ],
+    "subtotal": 98000,
+    "tax": 7840,
+    "shippingCost": 5000,
+    "total": 110840,
+    "status": "pending",
+    "paymentMethod": "credit_card",
+    "paymentStatus": "paid",
+    "shippingAddress": {
+      "street": "Calle 123 #45-67",
+      "city": "Cali",
+      "state": "Valle del Cauca",
+      "zipCode": "760001",
+      "country": "Colombia"
+    },
+    "notes": "Entregar en horas de la mañana",
+    "createdAt": "2025-12-11T04:26:18.072Z",
+    "updatedAt": "2025-12-11T04:26:18.076Z"
+  },
+  {
+    "id": "order2",
+    "orderNumber": "ORD-2024-0002",
+    "userId": "user2",
+    "userName": "María Cliente",
+    "userEmail": "cliente@cremosos.com",
+    "items": [
+      {
+        "id": "item3",
+        "productId": "prod3",
+        "productName": "Postre Especial Chocolate",
+        "productPrice": 25000,
+        "productImage": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400",
+        "quantity": 1,
+        "subtotal": 25000
+      }
+    ],
+    "subtotal": 25000,
+    "tax": 2000,
+    "shippingCost": 5000,
+    "total": 32000,
+    "status": "processing",
+    "paymentMethod": "debit_card",
+    "paymentStatus": "paid",
+    "shippingAddress": {
+      "street": "Carrera 50 #30-20",
+      "city": "Cali",
+      "state": "Valle del Cauca",
+      "zipCode": "760002",
+      "country": "Colombia"
+    },
+    "notes": "",
+    "createdAt": "2025-12-12T04:26:18.076Z",
+    "updatedAt": "2025-12-12T04:26:18.076Z"
+  }
+]

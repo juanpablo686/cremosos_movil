@@ -1,0 +1,24 @@
+[
+  {
+    "id": "pur1",
+    "purchaseNumber": "COMP-2024-0001",
+    "supplierId": "sup1",
+    "supplierName": "Lácteos del Valle",
+    "items": [
+      {
+        "productName": "Leche entera",
+        "quantity": 100,
+        "unitPrice": 2500,
+        "total": 250000
+      }
+    ],
+    "subtotal": 250000,
+    "tax": 20000,
+    "total": 270000,
+    "status": "completed",
+    "notes": "Entrega programada para el lunes",
+    "createdBy": "user1",
+    "createdAt": "2025-12-12T04:26:18.076Z",
+    "receivedAt": "2025-12-12T04:26:18.076Z"
+  }
+]

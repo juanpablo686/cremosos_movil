@@ -1,0 +1,62 @@
+[
+  {
+    "id": "user1",
+    "email": "admin@cremosos.com",
+    "password": "123456",
+    "name": "Juan Admin",
+    "phone": "3001234567",
+    "role": "admin",
+    "address": {
+      "street": "Calle 123",
+      "city": "Bogotá",
+      "state": "Cundinamarca",
+      "zipCode": "110111",
+      "country": "Colombia"
+    }
+  },
+  {
+    "id": "user2",
+    "email": "maria.garcia@email.com",
+    "password": "123456",
+    "name": "María García",
+    "phone": "3109876543",
+    "role": "customer",
+    "address": {
+      "street": "Carrera 45 #67-89",
+      "city": "Medellín",
+      "state": "Antioquia",
+      "zipCode": "050021",
+      "country": "Colombia"
+    }
+  },
+  {
+    "id": "user3",
+    "email": "carlos.lopez@email.com",
+    "password": "123456",
+    "name": "Carlos López",
+    "phone": "3158887766",
+    "role": "customer",
+    "address": {
+      "street": "Avenida 30 #15-20",
+      "city": "Cali",
+      "state": "Valle del Cauca",
+      "zipCode": "760042",
+      "country": "Colombia"
+    }
+  },
+  {
+    "id": "user4",
+    "email": "ana.martinez@email.com",
+    "password": "123456",
+    "name": "Ana Martínez",
+    "phone": "3201234567",
+    "role": "customer",
+    "address": {
+      "street": "Calle 85 #12-34",
+      "city": "Barranquilla",
+      "state": "Atlántico",
+      "zipCode": "080001",
+      "country": "Colombia"
+    }
+  }
+]

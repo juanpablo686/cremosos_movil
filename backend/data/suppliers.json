@@ -1,0 +1,19 @@
+[
+  {
+    "id": "sup1",
+    "name": "Lácteos del Valle",
+    "contactName": "María González",
+    "email": "contacto@lacteosval.com",
+    "phone": "3101234567",
+    "address": "Calle 45 #23-10",
+    "city": "Cali",
+    "productsSupplied": [
+      "Leche",
+      "Crema",
+      "Queso"
+    ],
+    "rating": 4.5,
+    "isActive": true,
+    "createdAt": "2025-12-12T04:26:18.076Z"
+  }
+]
