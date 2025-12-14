@@ -1,13 +1,23 @@
+// Importar configuración de la API y servicio base
 import '../config/api_config.dart';
 import 'api_service.dart';
 
 /// Servicio de Productos
 /// EXPLICAR EN EXPOSICIÓN: Maneja todas las operaciones relacionadas con
-/// el catálogo de productos (listar, buscar, filtrar, obtener detalles)
+/// el catálogo de productos:
+/// - getAllProducts: Listar todos los productos con filtros y paginación
+/// - getProductById: Obtener detalle de un producto específico
+/// - getFeaturedProducts: Obtener productos destacados para home
+/// - createProduct: Crear nuevo producto (solo admin)
+/// - updateProduct: Actualizar producto existente (solo admin)
+/// - deleteProduct: Eliminar producto (solo admin)
+/// - searchProducts: Buscar productos por nombre o descripción
 
 class ProductService {
+  // Referencia al servicio base de API para hacer peticiones HTTP
   final ApiService _apiService;
 
+  // Inyección de dependencias en el constructor
   ProductService(this._apiService);
 
   /// GET ALL PRODUCTS - GET /api/products

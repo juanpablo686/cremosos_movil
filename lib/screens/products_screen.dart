@@ -1,4 +1,10 @@
-// Importaciones necesarias
+// Pantalla de Productos
+// EXPLICAR EN EXPOSICIÓN: Esta pantalla muestra el catálogo de productos
+// - Lista todos los productos disponibles (arroz con leche y fresas con crema)
+// - Permite a los administradores agregar/editar/eliminar productos
+// - Permite a los clientes ver detalles y agregar al carrito
+// Usa Riverpod para cargar productos de la API
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
@@ -6,7 +12,8 @@ import '../services/product_service.dart';
 import '../widgets/app_drawer.dart';
 import '../providers/auth_provider.dart';
 
-// Pantalla de productos - muestra catálogo de productos disponibles
+/// Widget principal de la pantalla de productos
+/// ConsumerStatefulWidget permite usar Riverpod y mantener estado
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
@@ -15,10 +22,14 @@ class ProductsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
+  /// Se ejecuta al crear el widget
+  /// EXPLICAR: initState es un método del ciclo de vida de Flutter
   @override
   void initState() {
     super.initState();
     // Cargar productos al iniciar la pantalla
+    // EXPLICAR: Future.microtask ejecuta la función después de construir el widget
+    // Esto evita modificar el estado durante el build
     Future.microtask(
       () => ref.read(productsListProvider.notifier).loadProducts(),
     );
@@ -26,13 +37,19 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtener lista de productos desde el provider
+    // Observar la lista de productos desde el provider
+    // EXPLICAR: ref.watch escucha cambios y reconstruye cuando cambian los productos
     final productsAsync = ref.watch(productsListProvider);
+
+    // Obtener usuario actual para verificar permisos
     final user = ref.watch(authProvider).user;
-    // Verificar si el usuario es administrador para mostrar opciones de edición
+
+    // Verificar si el usuario es administrador
+    // EXPLICAR: Solo los admins pueden agregar/editar/eliminar productos
     final isAdmin = user?.role.toString() == 'UserRole.admin';
 
     return Scaffold(
+      // Drawer lateral con menú de navegación
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Productos'),
@@ -40,6 +57,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         foregroundColor: Colors.white,
         actions: [
           // Botón de agregar producto solo visible para administradores
+          // EXPLICAR: if dentro de una lista en Dart permite mostrar widgets condicionalmente
           if (isAdmin)
             IconButton(
               icon: const Icon(Icons.add),
@@ -47,25 +65,33 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             ),
         ],
       ),
+      // Manejar los diferentes estados de carga
+      // EXPLICAR: AsyncValue tiene tres estados: data, loading, error
       body: productsAsync.when(
+        // Estado DATA: se cargaron los productos exitosamente
         data: (products) {
           if (products.isEmpty) {
             return const Center(child: Text('No hay productos disponibles'));
           }
 
+          // RefreshIndicator permite actualizar jalando hacia abajo
           return RefreshIndicator(
             onRefresh: () async {
+              // Invalidar el provider para recargar los datos
               ref.invalidate(productsListProvider);
             },
+            // GridView muestra productos en cuadrícula
             child: GridView.builder(
               padding: const EdgeInsets.all(16),
+              // Configuración de la cuadrícula
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisCount: 3, // 3 columnas
+                childAspectRatio: 0.75, // Proporción alto/ancho de cada celda
+                crossAxisSpacing: 12, // Espacio horizontal entre celdas
+                mainAxisSpacing: 12, // Espacio vertical entre celdas
               ),
               itemCount: products.length,
+              // Construir cada tarjeta de producto
               itemBuilder: (context, index) {
                 final product = products[index];
                 return _ProductCard(product: product, isAdmin: isAdmin);
@@ -73,7 +99,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             ),
           );
         },
+        // Estado LOADING: cargando productos de la API
         loading: () => const Center(child: CircularProgressIndicator()),
+        // Estado ERROR: falló la carga de productos
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -82,6 +110,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               const SizedBox(height: 16),
               Text('Error: $error'),
               const SizedBox(height: 16),
+              // Botón para reintentar la carga
               ElevatedButton(
                 onPressed: () => ref.invalidate(productsListProvider),
                 child: const Text('Reintentar'),
@@ -93,7 +122,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
+  /// Mostrar diálogo para agregar o editar producto
+  /// EXPLICAR: [product] es opcional, si se pasa es modo edición, sino es creación
   void _showProductDialog(BuildContext context, [dynamic product]) {
+    // Controladores pre-llenados si es modo edición
     final nameController = TextEditingController(text: product?['name'] ?? '');
     final priceController = TextEditingController(
       text: product?['price']?.toString() ?? '',

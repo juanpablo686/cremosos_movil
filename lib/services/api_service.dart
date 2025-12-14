@@ -7,45 +7,54 @@ import '../config/api_config.dart';
 /// Servicio base para todas las peticiones HTTP a la API
 /// Maneja autenticación automática, logging y manejo de errores
 /// EXPLICAR EN EXPOSICIÓN: Dio es una librería HTTP potente que permite:
-/// - Interceptores (agregar token automáticamente)
-/// - Manejo de errores centralizado
-/// - Logging de peticiones para debugging
-/// - Retry automático en caso de fallo
+/// - Interceptores: agregar token automáticamente a cada petición
+/// - Manejo de errores centralizado: un solo lugar para manejar errores HTTP
+/// - Logging de peticiones: ver todas las requests/responses para debugging
+/// - Retry automático: reintentar peticiones fallidas automáticamente
 
 class ApiService {
   // Instancia de Dio para hacer peticiones HTTP
+  // late significa que se inicializará antes de usarse pero no en la declaración
   late final Dio _dio;
 
   // Almacenamiento seguro para el token JWT
   // EXPLICAR: flutter_secure_storage usa el Keychain en iOS y KeyStore en Android
+  // Esto es más seguro que SharedPreferences porque encripta los datos
   final _secureStorage = const FlutterSecureStorage();
 
-  // Clave para guardar el token en storage
+  // Clave constante para guardar y recuperar el token del storage
   static const String _tokenKey = 'auth_token';
 
   // Constructor: Configura Dio con opciones base
   ApiService() {
+    // Crear instancia de Dio con configuración inicial
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConfig.baseUrl,
-        connectTimeout: ApiConfig.connectionTimeout,
-        receiveTimeout: ApiConfig.receiveTimeout,
-        headers: ApiConfig.defaultHeaders,
+        baseUrl:
+            ApiConfig.baseUrl, // URL base de la API (http://localhost:3000/api)
+        connectTimeout:
+            ApiConfig.connectionTimeout, // Tiempo máximo para conectar (30s)
+        receiveTimeout: ApiConfig
+            .receiveTimeout, // Tiempo máximo para recibir respuesta (30s)
+        headers: ApiConfig
+            .defaultHeaders, // Headers por defecto (Content-Type: application/json)
       ),
     );
 
-    // Agregar interceptores
+    // Configurar interceptores para modificar requests/responses
     _setupInterceptors();
   }
 
   /// Configura interceptores de Dio
-  /// EXPLICAR: Los interceptores permiten modificar requests/responses automáticamente
+  /// EXPLICAR: Los interceptores son funciones que se ejecutan antes/después de cada petición
+  /// Permiten agregar funcionalidad común sin repetir código
   void _setupInterceptors() {
+    // Agregar interceptor personalizado para autenticación
     _dio.interceptors.add(
-      // Interceptor para agregar token de autenticación automáticamente
       InterceptorsWrapper(
+        // onRequest: Se ejecuta ANTES de enviar cada petición
         onRequest: (options, handler) async {
-          // Obtener token guardado
+          // Obtener token JWT guardado en storage seguro
           final token = await getAuthToken();
 
           // Si existe token, agregarlo al header Authorization

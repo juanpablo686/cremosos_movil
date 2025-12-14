@@ -8,10 +8,10 @@ class ApiConfig {
   // Para desarrollo local usamos localhost o la IP de tu máquina
   static const String baseUrl = 'http://localhost:3000/api';
 
-  // Timeout para las peticiones HTTP (30 segundos)
-  // EXPLICAR: Si la petición tarda más de 30s, se cancela automáticamente
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  // Timeout para las peticiones HTTP (10 segundos - optimizado)
+  // EXPLICAR: Si la petición tarda más de 10s, se cancela automáticamente
+  static const Duration connectionTimeout = Duration(seconds: 10);
+  static const Duration receiveTimeout = Duration(seconds: 10);
 
   // Endpoints de Autenticación (3 endpoints requeridos)
   static const String loginEndpoint = '/auth/login';

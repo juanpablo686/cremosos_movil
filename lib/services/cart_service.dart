@@ -1,16 +1,21 @@
+// Importar configuración de la API y servicio base
 import '../config/api_config.dart';
 import 'api_service.dart';
 
 /// Servicio de Carrito de Compras
-/// EXPLICAR EN EXPOSICIÓN: Implementa operaciones CRUD completas
+/// EXPLICAR EN EXPOSICIÓN: Implementa las 4 operaciones CRUD completas:
 /// - CREATE (POST): Agregar producto al carrito
-/// - READ (GET): Obtener carrito actual
-/// - UPDATE (PUT): Modificar cantidad de producto
-/// - DELETE: Eliminar producto del carrito
+/// - READ (GET): Obtener carrito actual del usuario
+/// - UPDATE (PUT): Modificar cantidad de un producto
+/// - DELETE: Eliminar producto del carrito o vaciar todo
+/// IMPORTANTE: Cada usuario tiene su propio carrito que persiste en la base de datos
+/// El servidor identifica al usuario mediante el token JWT
 
 class CartService {
+  // Referencia al servicio base de API para hacer peticiones HTTP
   final ApiService _apiService;
 
+  // Inyección de dependencias en el constructor
   CartService(this._apiService);
 
   /// GET CART - GET /api/cart

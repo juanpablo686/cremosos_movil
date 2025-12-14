@@ -1,14 +1,24 @@
+// Importar configuración de la API y servicio base
 import '../config/api_config.dart';
 import 'api_service.dart';
 
 /// Servicio de Autenticación
-/// EXPLICACION Este servicio maneja todas las operaciones relacionadas
-/// con la autenticación de usuarios (login, registro, obtener perfil)
+/// EXPLICAR EN EXPOSICIÓN: Este servicio maneja todas las operaciones relacionadas
+/// con la autenticación de usuarios:
+/// - Login: Iniciar sesión con email y contraseña
+/// - Register: Crear cuenta nueva
+/// - Get Profile: Obtener datos del usuario autenticado
+/// - Update Profile: Actualizar información personal
+/// - Logout: Cerrar sesión y limpiar token
 
 class AuthService {
+  // Referencia al servicio base de API para hacer peticiones HTTP
+  // final significa que no se puede reasignar después de inicializarse
   final ApiService _apiService;
 
-  // Inyección de dependencias - Explicar patrón
+  // Inyección de dependencias: recibir ApiService en el constructor
+  // EXPLICAR: Patrón de diseño que facilita testing y reutilización
+  // En lugar de crear ApiService aquí, lo recibimos desde afuera
   AuthService(this._apiService);
 
   /// LOGIN - POST /api/auth/login

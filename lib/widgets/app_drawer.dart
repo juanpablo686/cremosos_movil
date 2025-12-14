@@ -1,4 +1,10 @@
-// Importaciones de pantallas
+// Menú Lateral de Navegación (Drawer)
+// EXPLICAR EN EXPOSICIÓN: Este widget es el menú lateral que se abre desde el AppBar
+// Muestra diferentes opciones según el rol del usuario:
+// - ADMIN: Productos, Carrito, Dashboard, POS, Gestión de Pedidos (todos los clientes), Reportes, Clientes, Configuración
+// - CLIENTE: Productos, Carrito, Mis Pedidos (solo sus propios pedidos), Perfil
+// Permite navegar entre pantallas y cerrar sesión
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -13,24 +19,28 @@ import '../screens/customers_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/settings_screen.dart';
 
-// Menú lateral de navegación (Drawer)
-// EXPLICAR: Muestra opciones de menú según el rol del usuario
-// Admins ven todo, clientes solo ven: productos, carrito, mis pedidos, perfil
+/// Widget del menú lateral de navegación
+/// ConsumerWidget permite acceder a providers de Riverpod
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Obtener usuario actual del provider
+    // Obtener usuario actual desde el provider de autenticación
+    // EXPLICAR: ref.watch escucha cambios en authProvider
     final user = ref.watch(authProvider).user;
-    // Verificar si es administrador
+
+    // Verificar si el usuario es administrador
+    // EXPLICAR: Solo admins ven todas las opciones del menú
     final isAdmin = user?.role.toString() == 'UserRole.admin';
 
     return Drawer(
       child: Column(
         children: [
           // Encabezado del drawer con información del usuario
+          // EXPLICAR: UserAccountsDrawerHeader es un widget de Material Design
           UserAccountsDrawerHeader(
+            // Gradiente de fondo morado
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Colors.deepPurple, Colors.purple],
@@ -38,10 +48,13 @@ class AppDrawer extends ConsumerWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            // Avatar circular con inicial del nombre
+            // Avatar circular con inicial del nombre del usuario
+            // EXPLICAR: CircleAvatar crea un círculo con la letra inicial
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Text(
+                // Obtener primera letra del nombre en mayúscula
+                // EXPLICAR: Si no hay nombre, mostrar 'U' de User
                 user?.name != null && user!.name.isNotEmpty
                     ? user.name.substring(0, 1).toUpperCase()
                     : 'U',
@@ -88,17 +101,22 @@ class AppDrawer extends ConsumerWidget {
                     );
                   },
                 ),
-                _DrawerItem(
-                  icon: Icons.receipt_long,
-                  title: 'Mis Pedidos',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
-                    );
-                  },
-                ),
+
+                // Mis Pedidos - Solo para clientes
+                if (!isAdmin)
+                  _DrawerItem(
+                    icon: Icons.receipt_long,
+                    title: 'Mis Pedidos',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyOrdersScreen(),
+                        ),
+                      );
+                    },
+                  ),
 
                 if (isAdmin) ...[
                   const Divider(),

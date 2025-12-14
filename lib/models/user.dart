@@ -1,19 +1,32 @@
-// models/user.dart - Modelo de Usuario
+// Modelo de Usuario
+// EXPLICAR EN EXPOSICIÓN: Este archivo define la estructura de datos del usuario
+// Incluye métodos para convertir entre JSON (API) y objetos Dart (App)
 
+/// Clase principal que representa a un usuario del sistema
+/// Contiene toda la información personal, direcciones, preferencias y métodos de pago
 class User {
-  final String id;
-  final String name;
-  final String email;
-  final String? phone;
-  final String? birthDate;
-  final String? avatar;
-  final List<Address> addresses;
-  final UserRole role;
-  final UserPreferences preferences;
-  final List<PaymentMethod> paymentMethods;
-  final DateTime createdAt;
-  final bool isActive;
+  // Propiedades básicas del usuario
+  final String id; // ID único del usuario en la base de datos
+  final String name; // Nombre completo del usuario
+  final String email; // Email (usado para login)
+  final String? phone; // Teléfono (opcional, por eso el ?)
+  final String? birthDate; // Fecha de nacimiento (opcional)
+  final String? avatar; // URL de la foto de perfil (opcional)
 
+  // Propiedades complejas (listas y objetos)
+  final List<Address> addresses; // Lista de direcciones de envío
+  final UserRole role; // Rol del usuario (admin, customer, employee)
+  final UserPreferences
+  preferences; // Preferencias de notificaciones, tema, etc.
+  final List<PaymentMethod> paymentMethods; // Métodos de pago guardados
+
+  // Metadatos
+  final DateTime createdAt; // Fecha de registro
+  final bool isActive; // Indica si la cuenta está activa
+
+  // Constructor
+  // EXPLICAR: required significa que el parámetro es obligatorio
+  // this.propertyName es una forma corta de asignar el parámetro a la propiedad
   User({
     required this.id,
     required this.name,
@@ -21,14 +34,17 @@ class User {
     this.phone,
     this.birthDate,
     this.avatar,
-    this.addresses = const [],
+    this.addresses = const [], // Lista vacía por defecto
     required this.role,
     required this.preferences,
-    this.paymentMethods = const [],
+    this.paymentMethods = const [], // Lista vacía por defecto
     required this.createdAt,
-    this.isActive = true,
+    this.isActive = true, // Activo por defecto
   });
 
+  /// Factory constructor para crear User desde JSON
+  /// EXPLICAR: Se usa cuando recibimos datos de la API en formato JSON
+  /// Convierte Map<String, dynamic> a objeto User
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as String,
@@ -37,22 +53,27 @@ class User {
       phone: json['phone'] as String?,
       birthDate: json['birthDate'] as String?,
       avatar: json['avatar'] as String?,
+      // Convertir array de JSON a lista de objetos Address
       addresses:
           (json['addresses'] as List<dynamic>?)
               ?.map((e) => Address.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      // Convertir string del rol a enum UserRole
       role: UserRole.fromString(json['role'] as String),
+      // Si preferences existe en JSON, convertirlo, sino crear uno nuevo
       preferences: json['preferences'] != null
           ? UserPreferences.fromJson(
               json['preferences'] as Map<String, dynamic>,
             )
           : UserPreferences(), // Valores por defecto si no vienen del servidor
+      // Convertir array de JSON a lista de objetos PaymentMethod
       paymentMethods:
           (json['paymentMethods'] as List<dynamic>?)
               ?.map((e) => PaymentMethod.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      // Parsear fecha ISO 8601 a objeto DateTime
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(), // Fecha actual si no viene del servidor
@@ -60,6 +81,9 @@ class User {
     );
   }
 
+  /// Convertir objeto User a JSON
+  /// EXPLICAR: Se usa cuando enviamos datos a la API
+  /// Convierte objeto User a Map<String, dynamic>
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -68,15 +92,23 @@ class User {
       'phone': phone,
       'birthDate': birthDate,
       'avatar': avatar,
+      // Convertir lista de Address a lista de JSON
       'addresses': addresses.map((e) => e.toJson()).toList(),
+      // Convertir enum UserRole a string
       'role': role.value,
+      // Convertir objeto UserPreferences a JSON
       'preferences': preferences.toJson(),
+      // Convertir lista de PaymentMethod a lista de JSON
       'paymentMethods': paymentMethods.map((e) => e.toJson()).toList(),
+      // Convertir DateTime a string ISO 8601
       'createdAt': createdAt.toIso8601String(),
       'isActive': isActive,
     };
   }
 
+  /// Método copyWith para crear una copia modificada del usuario
+  /// EXPLICAR: Permite modificar algunas propiedades manteniendo las demás igual
+  /// Esto es importante porque los objetos deberían ser inmutables
   User copyWith({
     String? id,
     String? name,
@@ -92,7 +124,7 @@ class User {
     bool? isActive,
   }) {
     return User(
-      id: id ?? this.id,
+      id: id ?? this.id, // Si se pasa id, usarlo, sino usar el actual
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone ?? this.phone,

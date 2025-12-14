@@ -1,8 +1,16 @@
-// screens/auth_screen.dart
+// Pantalla de Autenticación (Login y Registro)
+// EXPLICAR EN EXPOSICIÓN: Esta pantalla permite a los usuarios:
+// - Iniciar sesión con email y contraseña
+// - Crear una cuenta nueva (registro)
+// - Cambiar entre modo login y registro
+// Usa Riverpod para manejar el estado de autenticación
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 
+/// Widget principal de la pantalla de autenticación
+/// ConsumerStatefulWidget permite usar Riverpod y tener estado local
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
@@ -11,15 +19,26 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
+  // Variable para alternar entre login y registro
   bool _isLogin = true;
+
+  // Key para validar el formulario
+  // EXPLICAR: GlobalKey permite acceder al estado del formulario desde fuera
   final _formKey = GlobalKey<FormState>();
+
+  // Controladores de texto para los campos del formulario
+  // EXPLICAR: TextEditingController permite leer y modificar el texto de un TextField
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  // Variable para checkbox de términos y condiciones
   bool _acceptTerms = false;
 
+  /// Limpiar recursos al destruir el widget
+  /// EXPLICAR: Los controladores deben liberarse para evitar memory leaks
   @override
   void dispose() {
     _emailController.dispose();
@@ -30,9 +49,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     super.dispose();
   }
 
+  /// Función para enviar el formulario
+  /// EXPLICAR: Se ejecuta al presionar botón de Login o Registro
   Future<void> _submit() async {
+    // Validar campos del formulario
     if (!_formKey.currentState!.validate()) return;
 
+    // Si es registro, validar que se aceptaron los términos
     if (!_isLogin && !_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debes aceptar los términos')),
@@ -42,11 +65,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     try {
       if (_isLogin) {
+        // Modo LOGIN: llamar a login del provider
+        // EXPLICAR: ref.read obtiene el notifier para ejecutar acciones
         await ref
             .read(authProvider.notifier)
             .login(_emailController.text.trim(), _passwordController.text);
       } else {
-        // Registro - convertir a Map para el provider
+        // Modo REGISTRO: llamar a register del provider
+        // Convertir datos a Map para el provider
         await ref.read(authProvider.notifier).register({
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
@@ -57,7 +83,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         });
       }
 
-      // Redirigir automáticamente al HomeScreen después del login/registro
+      // Mostrar mensaje de éxito
+      // EXPLICAR: mounted verifica si el widget sigue en el árbol
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -70,9 +97,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         );
 
         // Navegar al home screen automáticamente
+        // EXPLICAR: pushReplacementNamed reemplaza la pantalla actual
+        // para que el usuario no pueda volver atrás a la pantalla de login
         Navigator.of(context).pushReplacementNamed('/');
       }
     } catch (e) {
+      // Mostrar mensaje de error si falla el login/registro
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
@@ -83,10 +113,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Observar el estado de autenticación
+    // EXPLICAR: ref.watch escucha cambios y reconstruye el widget
     final authState = ref.watch(authProvider);
 
     return Scaffold(
       body: Container(
+        // Gradiente de fondo morado
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,

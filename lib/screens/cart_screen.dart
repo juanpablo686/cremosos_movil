@@ -1,11 +1,19 @@
-// Importaciones necesarias
+// Pantalla del Carrito de Compras
+// EXPLICAR EN EXPOSICIÓN: Esta pantalla muestra:
+// - Lista de productos agregados al carrito
+// - Permite cambiar cantidades de cada producto
+// - Permite eliminar productos del carrito
+// - Muestra cálculo de totales (subtotal, impuestos, envío, total)
+// - Botón para proceder al checkout (finalizar compra)
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 import '../widgets/app_drawer.dart';
 import 'my_orders_screen.dart';
 
-// Pantalla del carrito de compras
+/// Widget principal de la pantalla del carrito
+/// ConsumerStatefulWidget permite usar Riverpod y mantener estado local
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
@@ -14,19 +22,24 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  // Datos del carrito cargados desde el backend
-  Map<String, dynamic>? cartData;
-  bool isLoading = true;
-  String? errorMessage;
+  // Variables de estado para manejar los datos del carrito
+  Map<String, dynamic>? cartData; // Datos del carrito cargados desde la API
+  bool isLoading = true; // Indicador de carga
+  String? errorMessage; // Mensaje de error si falla la carga
 
+  /// Se ejecuta al crear el widget
+  /// EXPLICAR: initState es parte del ciclo de vida de Flutter
   @override
   void initState() {
     super.initState();
-    _loadCart();
+    _loadCart(); // Cargar carrito inmediatamente
   }
 
-  // Cargar datos del carrito desde la API
+  /// Cargar datos del carrito desde la API
+  /// EXPLICAR: Esta función hace una petición GET al backend
+  /// El backend identifica al usuario por el token JWT
   Future<void> _loadCart() async {
+    // Actualizar estado: mostrar loading
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -35,16 +48,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     try {
       final apiService = ApiService();
       // Obtener carrito del usuario autenticado
+      // EXPLICAR: El token se agrega automáticamente por el interceptor
       final response = await apiService.get('/cart');
 
       if (response.statusCode == 200) {
         setState(() {
           // Extraer datos del carrito de la respuesta
+          // EXPLICAR: El backend puede retornar { data: {...} } o directamente {...}
           cartData = response.data['data'] ?? response.data;
           isLoading = false;
         });
       }
     } catch (e) {
+      // Si hay error, mostrar mensaje
       setState(() {
         errorMessage = 'Error al cargar carrito: $e';
         isLoading = false;
@@ -52,19 +68,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  // Actualizar cantidad de un item en el carrito
+  /// Actualizar cantidad de un item en el carrito
+  /// EXPLICAR: Hace petición PUT al backend para modificar la cantidad
+  /// itemId: ID del item en el carrito
+  /// newQuantity: Nueva cantidad deseada
   Future<void> _updateQuantity(String itemId, int newQuantity) async {
     try {
       final apiService = ApiService();
-      // Enviar nueva cantidad al backend
+      // Enviar nueva cantidad al backend usando PUT
+      // EXPLICAR: PUT se usa para actualizar recursos existentes
       await apiService.put(
         '/cart/items/$itemId',
         data: {'quantity': newQuantity},
       );
 
-      // Recargar carrito para reflejar cambios
+      // Recargar carrito para reflejar cambios y recalcular totales
       await _loadCart();
 
+      // Mostrar mensaje de confirmación
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -75,6 +96,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         );
       }
     } catch (e) {
+      // Mostrar error si falla la actualización
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
@@ -83,13 +105,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  // Eliminar un producto del carrito
+  /// Eliminar un producto del carrito
+  /// EXPLICAR: Hace petición DELETE al backend
+  /// itemId: ID del item a eliminar
   Future<void> _removeItem(String itemId) async {
     try {
       final apiService = ApiService();
-      // Llamar al endpoint de eliminación
+      // Llamar al endpoint de eliminación usando DELETE
+      // EXPLICAR: DELETE se usa para eliminar recursos
       await apiService.delete('/cart/items/$itemId');
 
+      // Recargar carrito para mostrar cambios
       await _loadCart();
 
       if (mounted) {

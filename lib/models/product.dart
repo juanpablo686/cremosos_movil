@@ -1,24 +1,38 @@
-// models/product.dart - Modelo de Product
+// Modelo de Producto
+// EXPLICAR EN EXPOSICIÓN: Define la estructura de los productos de Cremosos
+// (arroz con leche y fresas con crema)
 
+/// Clase principal que representa un producto en el catálogo
+/// Contiene información del producto, precios, stock, calificaciones y variantes
 class Product {
-  final String id;
-  final String name;
-  final String description;
-  final double price;
-  final String image;
-  final ProductCategory category;
-  final int stock;
-  final bool? featured;
-  final bool? onSale;
-  final double? salePrice;
-  final double rating;
-  final int reviewCount;
-  final List<String> ingredients;
-  final List<String>? allergens;
-  final List<ProductVariant>? variants; // Variantes (tallas, colores, etc.)
-  final List<String>? images; // Imágenes adicionales
-  final bool isAvailable; // Disponibilidad
+  // Propiedades básicas del producto
+  final String id; // ID único del producto
+  final String name; // Nombre del producto
+  final String description; // Descripción detallada
+  final double price; // Precio regular del producto
+  final String image; // URL de la imagen principal
+  final ProductCategory
+  category; // Categoría (arroz_con_leche, fresas_con_crema)
+  final int stock; // Cantidad disponible en inventario
 
+  // Propiedades de marketing
+  final bool? featured; // Si es producto destacado (mostrar en home)
+  final bool? onSale; // Si está en oferta
+  final double? salePrice; // Precio de oferta (si onSale es true)
+
+  // Propiedades de valoración
+  final double rating; // Calificación promedio (0-5 estrellas)
+  final int reviewCount; // Número total de reseñas
+
+  // Propiedades de producto
+  final List<String> ingredients; // Lista de ingredientes
+  final List<String>? allergens; // Lista de alérgenos (opcional)
+  final List<ProductVariant>? variants; // Variantes (tamaños, sabores, etc.)
+  final List<String>? images; // Imágenes adicionales del producto
+  final bool isAvailable; // Disponibilidad para venta
+
+  // Constructor
+  // EXPLICAR: Inicializa todas las propiedades del producto
   Product({
     required this.id,
     required this.name,
@@ -36,16 +50,20 @@ class Product {
     this.allergens,
     this.variants,
     this.images,
-    this.isAvailable = true,
+    this.isAvailable = true, // Disponible por defecto
   });
 
+  /// Factory constructor para crear Product desde JSON
+  /// EXPLICAR: Convierte la respuesta de la API a objeto Product
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
+      // Convertir num a double (puede venir como int o double)
       price: (json['price'] as num).toDouble(),
       image: json['image'] as String,
+      // Convertir string de categoría a enum ProductCategory
       category: ProductCategory.fromString(json['category'] as String),
       stock: json['stock'] as int,
       featured: json['featured'] as bool?,
@@ -55,14 +73,16 @@ class Product {
           : null,
       rating: (json['rating'] as num).toDouble(),
       reviewCount: json['reviewCount'] as int,
+      // Convertir lista JSON a lista de strings
       ingredients: List<String>.from(json['ingredients'] as List),
       allergens: json['allergens'] != null
           ? List<String>.from(json['allergens'] as List)
           : null,
+      // Convertir lista JSON a lista de objetos ProductVariant
       variants: json['variants'] != null
           ? (json['variants'] as List)
-              .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
-              .toList()
+                .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+                .toList()
           : null,
       images: json['images'] != null
           ? List<String>.from(json['images'] as List)
@@ -71,6 +91,8 @@ class Product {
     );
   }
 
+  /// Convertir objeto Product a JSON
+  /// EXPLICAR: Se usa al enviar datos a la API (crear/actualizar productos)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -78,6 +100,7 @@ class Product {
       'description': description,
       'price': price,
       'image': image,
+      // Convertir enum a string
       'category': category.value,
       'stock': stock,
       'featured': featured,
@@ -87,12 +110,15 @@ class Product {
       'reviewCount': reviewCount,
       'ingredients': ingredients,
       'allergens': allergens,
+      // Convertir lista de objetos a lista JSON
       'variants': variants?.map((v) => v.toJson()).toList(),
       'images': images,
       'isAvailable': isAvailable,
     };
   }
 
+  /// Método copyWith para crear copia modificada del producto
+  /// EXPLICAR: Inmutabilidad - no modificamos el objeto, creamos uno nuevo
   Product copyWith({
     String? id,
     String? name,
